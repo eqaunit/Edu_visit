@@ -93,9 +93,22 @@
 
   .export-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border-clr);
     padding:10px 14px;box-shadow:0 -4px 14px rgba(0,0,0,.08);}
-  #exportBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:17px;
+  #exportBtn{width:100%;background:var(--dark-green);color:#fff;font-weight:700;font-size:17px;
     padding:13px;border:none;border-radius:10px;cursor:pointer;}
-  #exportBtn:active{background:#96620a;}
+  #exportBtn:active{background:var(--deep-green);}
+  #exportBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
+
+  #submitError{margin-top:10px;background:var(--red-soft);border:1px solid #f5c6c6;border-radius:10px;
+    padding:12px 14px;}
+  #submitErrorMsg{font-size:13.5px;color:var(--red);margin-bottom:10px;}
+  #fallbackExportBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:14.5px;
+    padding:11px;border:none;border-radius:9px;cursor:pointer;}
+
+  #thankYouScreen{text-align:center;padding:60px 24px;}
+  #thankYouScreen .ty-icon{font-size:56px;}
+  #thankYouScreen .ty-title{font-size:20px;font-weight:700;color:var(--dark-green);margin-top:14px;}
+  #thankYouScreen .ty-body{font-size:15px;color:var(--txt-body);margin-top:10px;line-height:1.8;}
+  #thankYouScreen .ty-body a{color:var(--dark-green);font-weight:700;}
 
   /* ---------- Modal ---------- */
   .modal-overlay{position:fixed;inset:0;background:rgba(20,40,30,.45);z-index:50;
@@ -188,10 +201,21 @@
 
   <div id="cardsList"></div>
 
-  <div class="tip">نصيحة: أكمل رصد كل القاعات وصدّر الملف قبل إغلاق الصفحة لتفادي فقد البيانات.</div>
+  <div class="tip" id="tipMsg">نصيحة: أكمل رصد كل القاعات وصدّر الملف قبل إغلاق الصفحة لتفادي فقد البيانات.</div>
 
-  <div class="export-bar">
+  <div class="export-bar" id="exportBar">
     <button id="exportBtn">📤 مشاركة / تصدير نتيجة الزيارة</button>
+    <div id="submitError" class="hidden">
+      <div id="submitErrorMsg"></div>
+      <button id="fallbackExportBtn">📥 تنزيل نسخة احتياطية</button>
+    </div>
+  </div>
+
+  <div id="thankYouScreen" class="hidden">
+    <div class="ty-icon">✅</div>
+    <div class="ty-title">شكراً لتعاونكم</div>
+    <div class="ty-body">تم تسليم النموذج إلى وحدة ضمان الجودة التعليمية<br>
+      <a href="mailto:eqa_unit@uqu.edu.sa">eqa_unit@uqu.edu.sa</a></div>
   </div>
 </div>
 
@@ -251,6 +275,9 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   let activeRowIndex=null;
   let isEmbeddedMode=false;
   const hasStorage = (typeof window.storage !== 'undefined') && !!window.storage;
+
+  // ⚠️ ضع هنا رابط Google Apps Script Web App (بعد نشره) — لا رابط افتراضي حقيقي هنا.
+  const SHEET_SUBMIT_API = 'https://script.google.com/macros/s/AKfycbxlX44DTmEnIAt21Cbd0i8DcMTIqJVbchJ5sn4-DGQHUXaSP0on7Y9XrAdylaFIFFxe/exec';
 
   // ---------- Helpers ----------
   function norm(h){ return (h==null?'':String(h)).trim(); }
@@ -324,6 +351,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       ? `زيارة ميدانية - ${meta.employeeName}`
       : `زيارة ميدانية${meta.buildings? ' - '+meta.buildings : ''}`;
     renderAll();
+    document.getElementById('exportBtn').textContent = '✅ تسليم';
     document.getElementById('uploadView').classList.add('hidden');
     document.getElementById('mainView').classList.remove('hidden');
   }
@@ -578,36 +606,121 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   });
 
   // ---------- Export ----------
+  const OUTPUT_HEADERS_EMBEDDED = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
+    'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
+    'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
+    'المقر', 'التاريخ ', 'اليوم', 'الأسبوع', 'الفصل'];
+
+  function buildEmbeddedRows(){
+    const rows = [];
+    dataRows.forEach(r=>{
+      if(!r.visited) return;
+      rows.push([
+        '', r.entry.note||'', r.entry.student||'', r.entry.member||'',
+        r.dayVal||'', r.weekNoRaw ?? 0, r.facultyCollege||'', r.instructor||'', r.facultyId||'',
+        r.code||'', r.room||'', r.stage||'', r.capacity||'', r.enrolled||'',
+        r.activity||'', r.section||'', r.hours||'', r.course||'', r.courseCode||'',
+        r.studyMode||'', r.dept||'', r.collegeOfCourse||'',
+        meta.campus||'', meta.date||'', meta.day||'', meta.week||'', r.semester||'',
+      ]);
+    });
+    return rows;
+  }
+
+  // ---------- تسليم بيانات الزيارة إلى Google Sheets (وضع الرابط/embedded فقط) ----------
+  async function submitToSheet(rows){
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=> controller.abort(), 20000);
+    try{
+      const response = await fetch(SHEET_SUBMIT_API, {
+        method: 'POST',
+        // text/plain يتفادى preflight الـCORS مع Google Apps Script (Apps Script لا يستجيب له بشكل صحيح)
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ rows }),
+        signal: controller.signal,
+      });
+      let data;
+      try{
+        data = await response.json();
+      }catch{
+        throw new Error('أعاد الخادم استجابة غير صالحة.');
+      }
+      if(!response.ok || !data.success){
+        throw new Error(data.error || 'تعذّر تسليم البيانات.');
+      }
+      return data;
+    }catch(error){
+      if(error && error.name === 'AbortError'){
+        throw new Error('انتهت مهلة الاتصال بالخادم.');
+      }
+      throw error;
+    }finally{
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function showThankYouScreen(){
+    document.getElementById('exportBar').classList.add('hidden');
+    document.getElementById('cardsList').classList.add('hidden');
+    document.getElementById('tipMsg').classList.add('hidden');
+    document.getElementById('thankYouScreen').classList.remove('hidden');
+  }
+
   document.getElementById('exportBtn').addEventListener('click', async ()=>{
     const remaining = dataRows.filter(r=>!r.visited).length;
+
+    if(isEmbeddedMode){
+      if(remaining>0){
+        if(!confirm(`لا يزال هناك ${remaining} قاعة لم تُرصد بعد. تسليم النموذج الآن على أي حال؟`)) return;
+      }
+      const rows = buildEmbeddedRows();
+      if(rows.length===0){
+        alert('لا توجد بيانات مرصودة للتسليم.');
+        return;
+      }
+      if(!SHEET_SUBMIT_API || SHEET_SUBMIT_API === 'ضع_هنا_رابط_Google_Apps_Script'){
+        document.getElementById('submitErrorMsg').textContent =
+          'لم يُضبط رابط استقبال البيانات بعد داخل الصفحة (SHEET_SUBMIT_API).';
+        document.getElementById('submitError').classList.remove('hidden');
+        return;
+      }
+      const btn = document.getElementById('exportBtn');
+      btn.disabled = true;
+      const originalLabel = btn.textContent;
+      btn.textContent = 'جارٍ التسليم...';
+      document.getElementById('submitError').classList.add('hidden');
+      try{
+        await submitToSheet(rows);
+        showThankYouScreen();
+      }catch(err){
+        console.warn('تعذّر التسليم إلى الشيت:', err);
+        document.getElementById('submitErrorMsg').textContent =
+          'تعذّر تسليم البيانات (' + (err.message||'خطأ غير معروف') + '). يمكنك تنزيل نسخة احتياطية والتواصل مع الوحدة.';
+        document.getElementById('submitError').classList.remove('hidden');
+      }finally{
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+      return;
+    }
+
+    // وضع الرفع اليدوي (ملف قديم) — يبقى بنفس السلوك السابق دون تغيير
     if(remaining>0){
       if(!confirm(`لا يزال هناك ${remaining} قاعة لم تُرصد بعد. تصدير الملف الآن على أي حال؟`)) return;
     }
     await exportWorkbook();
   });
 
-  const OUTPUT_HEADERS_EMBEDDED = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
-    'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
-    'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
-    'المقر', 'التاريخ ', 'اليوم', 'الأسبوع', 'الفصل'];
+  document.getElementById('fallbackExportBtn').addEventListener('click', async ()=>{
+    await exportWorkbook();
+  });
 
   async function exportWorkbook(){
     let outWorkbook, filename;
     const stamp = new Date().toISOString().slice(0,10);
 
     if(isEmbeddedMode){
-      const aoa = [OUTPUT_HEADERS_EMBEDDED];
-      dataRows.forEach(r=>{
-        if(!r.visited) return;
-        aoa.push([
-          '', r.entry.note||'', r.entry.student||'', r.entry.member||'',
-          r.dayVal||'', r.weekNoRaw ?? 0, r.facultyCollege||'', r.instructor||'', r.facultyId||'',
-          r.code||'', r.room||'', r.stage||'', r.capacity||'', r.enrolled||'',
-          r.activity||'', r.section||'', r.hours||'', r.course||'', r.courseCode||'',
-          r.studyMode||'', r.dept||'', r.collegeOfCourse||'',
-          meta.campus||'', meta.date||'', meta.day||'', meta.week||'', r.semester||'',
-        ]);
-      });
+      const aoa = [OUTPUT_HEADERS_EMBEDDED, ...buildEmbeddedRows()];
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       outWorkbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(outWorkbook, ws, `${meta.day} - ${meta.buildings}`.slice(0,31) || 'زيارة');
