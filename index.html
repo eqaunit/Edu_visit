@@ -218,8 +218,8 @@
 
     <div class="card">
       <div class="field" style="margin-bottom:12px;">
-        <label>اسم الموظف المسؤول عن هذي الزيارة (اختياري)</label>
-        <input type="text" id="employeeName" placeholder="مثال: أحمد محمد" style="direction:rtl;text-align:right;">
+        <label>رمز المشرف الميداني</label>
+        <input type="text" id="employeeName" placeholder="مثال: MS01" style="direction:rtl;text-align:right;">
       </div>
       <button class="primary-btn" id="genLinkBtn" disabled>إنشاء رابط هذي الزيارة</button>
       <div id="linkResultBox" class="hidden" style="margin-top:12px;">
@@ -726,8 +726,9 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   // ---------- رابط الزيارة (بديل آمن لآيفون) ----------
   function updateGenLinkBtnState(){
-    els.genLinkBtn.disabled = !(lastResults.length>0);
+    els.genLinkBtn.disabled = !(lastResults.length>0 && (els.employeeName.value||'').trim());
   }
+  els.employeeName.addEventListener('input', updateGenLinkBtnState);
 
   async function compressToB64Url(str){
     const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('deflate'));
@@ -739,6 +740,11 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   els.genLinkBtn.addEventListener('click', async ()=>{
     if(!lastResults.length) return;
+    if(!(els.employeeName.value||'').trim()){
+      alert('أدخل رمز المشرف الميداني أولاً.');
+      els.employeeName.focus();
+      return;
+    }
     const base = HOSTED_FORM_URL;
     if(typeof CompressionStream === 'undefined'){
       alert('متصفحك لا يدعم ضغط البيانات اللازم لهذي الميزة. جرّب متصفح حديث (كروم/سفاري الأحدث).');
