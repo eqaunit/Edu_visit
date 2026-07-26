@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>نموذج زيارة ميدانية — وحدة ضمان الجودة</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
+    --gold:#C49A1D; --gold-light:#F0D878; --gold-700:#B87B02;
+    --bg-page:#F7F9F8; --bg-light:#F0FFF4; --bg-white:#ffffff; --border-clr:#A8D5BA;
+    --gray-100:#F3F4F6; --gray-200:#E7E5EB; --gray-500:#8E8B96; --gray-700:#5A5862;
+    --txt-dark:#1C2B20; --txt-body:#2D5A3E; --txt-muted:#4A6A54;
+    --red:#D03A3A; --red-soft:#FEECEC; --green-ok:#2E8B57; --green-ok-bg:#E8F5E9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-page);color:var(--txt-dark);
+    font-family:'Tajawal','Segoe UI',Tahoma,Arial,sans-serif;}
+  body{min-height:100vh;display:flex;flex-direction:column;}
+  .hidden{display:none !important;}
+
+  /* ---------- Upload screen ---------- */
+  #uploadView{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px 20px;text-align:center;background:linear-gradient(180deg,var(--dark-green) 0%,var(--dark-green) 180px,var(--gray-100) 180px);}
+  .upload-badge{width:56px;height:56px;border-radius:16px;background:var(--gold-light);
+    display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+  #uploadView h1{color:#fff;font-size:19px;margin:0 0 6px;}
+  #uploadView p.lead{color:rgba(255,255,255,.85);font-size:13px;margin:0 0 28px;max-width:320px;}
+  .upload-card{background:#fff;border-radius:16px;padding:26px 20px;max-width:360px;width:100%;
+    box-shadow:0 10px 30px rgba(20,63,40,.18);border:1px solid var(--border-clr);}
+  .upload-card label.filebtn{display:block;background:var(--light-green);color:#fff;font-weight:700;
+    padding:14px;border-radius:10px;cursor:pointer;font-size:14.5px;}
+  .upload-card label.filebtn:active{background:var(--dark-green);}
+  .upload-card input[type=file]{display:none;}
+  .upload-hint{color:var(--txt-muted);font-size:12px;margin-top:12px;line-height:1.7;}
+  .upload-error{background:var(--red-soft);color:var(--red);border:1px solid #f5c6c6;border-radius:10px;
+    padding:10px 12px;font-size:13px;margin-top:14px;text-align:right;}
+  .upload-warning{background:#FFF9E8;color:#7A5A00;border:1px solid var(--gold-light);border-radius:10px;
+    padding:10px 12px;font-size:12.5px;margin-top:14px;text-align:right;line-height:1.8;}
+
+  /* ---------- Main view ---------- */
+  #mainView{flex:1;display:flex;flex-direction:column;background:var(--bg-page);}
+  .sticky-top{position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+  .app-header{background-color:#fff;
+    border-bottom:1px solid var(--border-clr);color:var(--txt-dark);
+    padding:14px 16px 12px;}
+  .app-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+  .app-header h1{margin:0;font-size:18.5px;font-weight:700;color:var(--dark-green);}
+  .app-header .meta{font-size:14.5px;font-weight:700;color:var(--txt-body);margin-top:4px;}
+  .reset-link{background:var(--gray-100);border:1px solid var(--border-clr);color:var(--txt-body);font-size:11.5px;
+    padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .progress-row{display:flex;align-items:center;gap:8px;margin-top:12px;}
+  .progress-track{flex:1;height:8px;background:var(--gray-200);border-radius:6px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--light-green);border-radius:6px;transition:width .3s;}
+  .progress-text{font-size:13.5px;white-space:nowrap;font-weight:700;color:var(--dark-green);}
+  .map-strip{display:flex;flex-wrap:wrap;gap:3px;margin-top:10px;max-height:32px;overflow:hidden;}
+  .map-tile{width:9px;height:9px;border-radius:2px;background:var(--gray-200);cursor:pointer;flex-shrink:0;}
+  .map-tile.done{background:var(--light-green);}
+  .visit-info{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .visit-info .vchip{background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
+    font-size:13.5px;padding:5px 12px;border-radius:7px;}
+  .visit-info .vchip b{color:var(--dark-green);font-weight:700;}
+
+  .toolbar{background:#fff;padding:10px 14px;border-bottom:1px solid var(--border-clr);}
+  #searchInput{width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border-clr);
+    font-size:13.5px;font-family:inherit;background:var(--bg-light);}
+  .filter-chips{display:flex;gap:6px;margin-top:8px;}
+  .filter-chip{border:1px solid var(--border-clr);background:#fff;color:var(--txt-body);
+    font-size:12px;padding:5px 12px;border-radius:20px;cursor:pointer;}
+  .filter-chip.active{background:var(--dark-green);border-color:var(--dark-green);color:#fff;}
+
+  #warningBanner{background:#FFF9E8;color:#7A5A00;font-size:12px;padding:8px 14px;border-bottom:1px solid var(--gold-light);}
+
+  #cardsList{flex:1;padding:12px 14px 90px;display:flex;flex-direction:column;gap:10px;}
+  .room-card{background:#fff;border:1px solid var(--border-clr);border-radius:12px;padding:12px 14px;
+    cursor:pointer;transition:transform .12s;}
+  .room-card:active{transform:scale(.98);}
+  .room-card.visited{border-color:var(--green-ok);background:var(--green-ok-bg);}
+  .room-card.flash{outline:2px solid var(--gold-700);}
+  .card-top{display:flex;align-items:center;justify-content:space-between;}
+  .room-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .room-badge{background:var(--dark-green);color:#fff;font-weight:700;font-size:16.5px;
+    padding:4px 12px;border-radius:8px;}
+  .room-badge-alt{background:var(--gold-700);color:#fff;font-weight:700;font-size:16.5px;
+    padding:4px 12px;border-radius:8px;}
+  .status-dot{width:11px;height:11px;border-radius:50%;background:var(--gray-500);}
+  .status-dot.done{background:var(--green-ok);}
+  .card-course{font-weight:700;font-size:16.5px;margin-top:8px;color:var(--txt-dark);}
+  .card-meta{font-size:14.5px;color:var(--txt-body);margin-top:3px;}
+  .card-meta-sub{font-size:13px;color:var(--txt-muted);margin-top:2px;}
+  .empty-state{text-align:center;color:var(--txt-muted);font-size:13px;padding:40px 10px;}
+
+  .export-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border-clr);
+    padding:10px 14px;box-shadow:0 -4px 14px rgba(0,0,0,.08);}
+  #exportBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:17px;
+    padding:13px;border:none;border-radius:10px;cursor:pointer;}
+  #exportBtn:active{background:#96620a;}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,40,30,.45);z-index:50;
+    display:flex;align-items:flex-end;}
+  .modal-sheet{background:#fff;width:100%;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;
+    padding:10px 18px 22px;animation:slideup .18s ease-out;}
+  @keyframes slideup{from{transform:translateY(30px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .modal-handle{width:40px;height:4px;background:var(--gray-200);border-radius:3px;margin:6px auto 14px;}
+  #modalRoom{margin:0;font-size:17px;font-weight:800;color:var(--dark-green);}
+  #modalInfo{font-size:14.5px;color:var(--txt-muted);margin-top:4px;margin-bottom:18px;line-height:1.6;}
+  .toggle-group{margin-bottom:16px;}
+  .toggle-group label{display:block;font-size:15.5px;font-weight:700;margin-bottom:8px;color:var(--txt-dark);}
+  .toggle-buttons{display:flex;gap:8px;}
+  .toggle-buttons button{flex:1;padding:15px;border-radius:10px;border:1.5px solid var(--border-clr);
+    background:#fff;font-size:16.5px;font-weight:700;cursor:pointer;color:var(--txt-body);}
+  .toggle-buttons button.active[data-value="نعم"]{background:var(--green-ok-bg);border-color:var(--green-ok);color:var(--green-ok);}
+  .toggle-buttons button.active[data-value="لا"]{background:var(--red-soft);border-color:var(--red);color:var(--red);}
+  .note-group label{display:block;font-size:15.5px;font-weight:700;margin-bottom:8px;}
+  #noteInput{width:100%;min-height:80px;border-radius:10px;border:1.5px solid var(--border-clr);
+    padding:10px;font-family:inherit;font-size:15.5px;resize:vertical;}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;}
+  .modal-actions button{flex:1;padding:14px;border-radius:10px;border:none;font-weight:700;font-size:16.5px;cursor:pointer;}
+  #cancelBtn{background:var(--gray-100);color:var(--txt-body);}
+  #saveBtn{background:var(--light-green);color:#fff;}
+  #saveBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
+  #clearBtn{display:block;width:100%;text-align:center;background:none;border:none;color:var(--red);
+    font-size:12.5px;margin-top:10px;cursor:pointer;text-decoration:underline;}
+
+  .tip{font-size:11px;color:var(--txt-muted);text-align:center;padding:8px 14px 4px;}
+</style>
+</head>
+<body>
+<noscript>
+  <div style="background:#1A5632;color:#fff;padding:28px 20px;text-align:center;font-family:Tajawal,'Segoe UI',Arial,sans-serif;direction:rtl;min-height:100vh;">
+    <div style="font-size:32px;margin-bottom:10px;">⚠️</div>
+    <h2 style="margin:0 0 12px;">افتح هذا الملف من متصفح مباشرة</h2>
+    <p style="max-width:360px;margin:0 auto 8px;line-height:1.8;">
+      يبدو إنك تفتحه من داخل معاينة واتساب أو تطبيق آخر لا يشغّل الجافاسكربت.
+    </p>
+    <p style="max-width:360px;margin:0 auto;line-height:1.8;">
+      اضغط على أيقونة المشاركة 📤 بجانب الملف واختر <b>"فتح في Safari"</b> (آيفون) أو <b>"فتح في Chrome"</b> (أندرويد) بدل فتحه من داخل الواتساب مباشرة.
+    </p>
+  </div>
+</noscript>
+
+<!-- ============ Upload Screen ============ -->
+<div id="uploadView">
+  <div class="upload-badge">🏫</div>
+  <h1>نموذج الزيارة الميدانية</h1>
+  <p class="lead">وحدة ضمان الجودة التعليمية — ارفع ملف الجدول المُصدَّر لهذه الزيارة (يوم واحد ومبنى واحد) لبدء الرصد.</p>
+  <div class="upload-card">
+    <label class="filebtn">
+      📄 اختر ملف الإكسل
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </label>
+    <div class="upload-hint">
+      الملف نفسه اللي يصدّره النظام لهذا اليوم/المبنى، بدون أي تعديل على أسماء الأعمدة.
+    </div>
+    <div id="uploadError" class="upload-error hidden"></div>
+  </div>
+</div>
+
+<!-- ============ Main View ============ -->
+<div id="mainView" class="hidden">
+  <div class="sticky-top">
+    <div class="app-header">
+      <div class="app-header-top">
+        <div>
+          <h1 id="titleLine">زيارة ميدانية</h1>
+          <div class="meta" id="metaLine"></div>
+        </div>
+      </div>
+      <div class="visit-info" id="visitInfo"></div>
+      <div class="progress-row">
+        <span class="progress-text" id="progressText">تم رصد 0 من 0</span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div class="map-strip" id="mapStrip"></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="ابحث برقم القاعة، المقرر، أو المحاضر...">
+      <div class="filter-chips">
+        <button class="filter-chip active" data-filter="all">الكل</button>
+        <button class="filter-chip" data-filter="pending">متبقٍ</button>
+        <button class="filter-chip" data-filter="done">تم الرصد</button>
+      </div>
+    </div>
+    <div id="warningBanner" class="hidden"></div>
+  </div>
+
+  <div id="cardsList"></div>
+
+  <div class="tip">نصيحة: أكمل رصد كل القاعات وصدّر الملف قبل إغلاق الصفحة لتفادي فقد البيانات.</div>
+
+  <div class="export-bar">
+    <button id="exportBtn">📤 مشاركة / تصدير نتيجة الزيارة</button>
+  </div>
+</div>
+
+<!-- ============ Entry Modal ============ -->
+<div id="entryModal" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3 id="modalRoom"></h3>
+    <div id="modalInfo"></div>
+
+    <div class="toggle-group">
+      <label>حضور عضو هيئة التدريس</label>
+      <div class="toggle-buttons" id="memberToggle">
+        <button data-value="نعم">نعم</button>
+        <button data-value="لا">لا</button>
+      </div>
+    </div>
+
+    <div class="toggle-group">
+      <label>حضور الطلاب</label>
+      <div class="toggle-buttons" id="studentToggle">
+        <button data-value="نعم">نعم</button>
+        <button data-value="لا">لا</button>
+      </div>
+    </div>
+
+    <div class="note-group">
+      <label>ملاحظة (اختياري)</label>
+      <textarea id="noteInput" placeholder="أي ملاحظة على سير المحاضرة..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button id="saveBtn" disabled>حفظ</button>
+      <button id="cancelBtn">إلغاء</button>
+    </div>
+    <button id="clearBtn" class="hidden">إلغاء رصد هذه القاعة</button>
+  </div>
+</div>
+
+<script>
+const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
+</script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  let workbook=null, worksheet=null, sheetName=null;
+  let headerRow=[];
+  let colIndex={};
+  let dataRows=[];
+  let meta={campus:'',date:'',day:'',semester:'',buildings:'',week:'',periods:''};
+  let originalFileName='زيارة';
+  let storageKey=null;
+  let filterStatus='all';
+  let searchQuery='';
+  let activeRowIndex=null;
+  let isEmbeddedMode=false;
+  const hasStorage = (typeof window.storage !== 'undefined') && !!window.storage;
+
+  // ---------- Helpers ----------
+  function norm(h){ return (h==null?'':String(h)).trim(); }
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function fmtVal(v){
+    if(v instanceof Date && !isNaN(v)){
+      const y=v.getFullYear(), m=String(v.getMonth()+1).padStart(2,'0'), d=String(v.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+    return v==null? '' : String(v).trim();
+  }
+  function natParts(s){ return String(s||'').match(/\d+|\D+/g) || ['']; }
+  function compareRooms(a,b){
+    const pa=natParts(a), pb=natParts(b);
+    const len=Math.max(pa.length,pb.length);
+    for(let i=0;i<len;i++){
+      const x=pa[i]||'', y=pb[i]||'';
+      const xn=parseFloat(x), yn=parseFloat(y);
+      const xIsNum=/^\d+$/.test(x.trim()), yIsNum=/^\d+$/.test(y.trim());
+      if(xIsNum && yIsNum){ if(xn!==yn) return xn-yn; }
+      else if(x!==y){ return x<y?-1:1; }
+    }
+    return 0;
+  }
+  function comparePeriod(a,b){
+    const pa=parseInt((String(a||'').match(/\d+/)||['0'])[0],10);
+    const pb=parseInt((String(b||'').match(/\d+/)||['0'])[0],10);
+    return pa-pb;
+  }
+  function compareRows(r1,r2){
+    const c=compareRooms(r1.room,r2.room);
+    return c!==0? c : comparePeriod(r1.period,r2.period);
+  }
+  function buildStorageKey(){
+    const raw = `visit_${meta.campus}_${meta.date}_${dataRows.length}`;
+    return raw.replace(/[\s\/\\'"،]+/g,'_').slice(0,180) || 'visit_default';
+  }
+  function showUploadError(msg){
+    const el=document.getElementById('uploadError');
+    el.textContent=msg; el.classList.remove('hidden');
+  }
+
+  // ---------- Embedded-visit mode (generated by نظام تجهيز ملفات الزيارات) ----------
+  async function initFromEmbedded(payload){
+    isEmbeddedMode = true;
+    originalFileName = `زيارة_${payload.meta.buildings||''}_${payload.meta.date||''}`.replace(/\s+/g,'_');
+    dataRows = (payload.rows||[]).map((r,i)=>({
+      sheetRowIndex:i,
+      room:r.room||'', building:r.building||'',
+      course:r.course||'', courseCode:r.courseCode||'', instructor:r.instructor||'',
+      section:r.section||'', period:r.dayVal||'', periodLabel:r.periodLabel||'', dayVal:r.dayVal||'',
+      dept:r.dept||'', collegeOfCourse:r.collegeOfCourse||'',
+      hours:r.hours||'', enrolled:r.enrolled||'', capacity:r.capacity||'', activity:r.activity||'',
+      weekNoRaw:r.weekNoRaw ?? 0, facultyCollege:r.facultyCollege||'', facultyId:r.facultyId||'',
+      code:r.code||'', stage:r.stage||'', studyMode:r.studyMode||'', semester:r.semester||'',
+      entry:{member:'نعم', student:'نعم', note:''},
+      visited:false,
+    }));
+    meta = {
+      campus: payload.meta.maqar||'', date: payload.meta.date||'', day: payload.meta.day||'',
+      semester: payload.meta.semester||'', buildings: payload.meta.buildings||'',
+      week: payload.meta.week||'', periods: payload.meta.periods||'',
+      employeeName: payload.meta.employeeName||'',
+    };
+    dataRows.sort(compareRows);
+    storageKey = buildStorageKey();
+    await loadSavedEntries();
+    document.getElementById('titleLine').textContent = meta.employeeName
+      ? `زيارة ميدانية - ${meta.employeeName}`
+      : `زيارة ميدانية${meta.buildings? ' - '+meta.buildings : ''}`;
+    renderAll();
+    document.getElementById('uploadView').classList.add('hidden');
+    document.getElementById('mainView').classList.remove('hidden');
+  }
+
+  // ---------- Storage (only works when opened inside Claude's artifact viewer) ----------
+  async function loadSavedEntries(){
+    if(!hasStorage) return;
+    try{
+      const res = await window.storage.get(storageKey, true);
+      if(res && res.value){
+        const saved = JSON.parse(res.value);
+        dataRows.forEach(r=>{
+          const s = saved[r.sheetRowIndex];
+          if(s){ r.entry = s; r.visited = !!(s.member && s.student); }
+        });
+      }
+    }catch(e){ /* no saved data yet for this visit — fine */ }
+  }
+  async function persistEntries(){
+    if(!hasStorage) return;
+    try{
+      const dict={};
+      dataRows.forEach(r=>{ if(r.visited) dict[r.sheetRowIndex]=r.entry; });
+      await window.storage.set(storageKey, JSON.stringify(dict), true);
+    }catch(e){ console.error('تعذر الحفظ التلقائي المشترك', e); }
+  }
+
+  // ---------- File parsing ----------
+  document.getElementById('fileInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    document.getElementById('uploadError').classList.add('hidden');
+    if(!file) return;
+    originalFileName = file.name.replace(/\.xlsx?$/i,'');
+    try{
+      const buf = await file.arrayBuffer();
+      workbook = XLSX.read(buf, {type:'array', cellDates:true});
+      sheetName = workbook.SheetNames[0];
+      worksheet = workbook.Sheets[sheetName];
+      const aoa = XLSX.utils.sheet_to_json(worksheet, {header:1, defval:null, raw:true});
+      if(!aoa || aoa.length<2) throw new Error('EMPTY_FILE');
+
+      headerRow = aoa[0].map(norm);
+      const NEED = {
+        room:'رقم القاعة', course:'المقرر', instructor:'المحاضر', section:'الشعبة',
+        period:'المحاضرة', hours:'س', dept:'القسم', enrolled:'الطلبة', capacity:'السقف',
+        activity:'النشاط', note:'ملاحظة', student:'الطلاب', member:'عضو هيئة التدريس',
+        campus:'المقر', date:'التاريخ', day:'اليوم', semester:'الفصل', code:'الرمز'
+      };
+      colIndex = {};
+      Object.keys(NEED).forEach(k=>{ colIndex[k] = headerRow.findIndex(h=>h===NEED[k]); });
+
+      if(colIndex.room===-1 || colIndex.course===-1){
+        showUploadError('لم أتعرف على عمود "رقم القاعة" أو "المقرر" داخل الملف. تأكد أنك رفعت ملف الجدول الصحيح بدون تعديل أسماء الأعمدة.');
+        return;
+      }
+
+      dataRows = [];
+      for(let i=1;i<aoa.length;i++){
+        const row = aoa[i];
+        if(!row) continue;
+        const room = row[colIndex.room];
+        if(room==null || String(room).trim()==='') continue;
+        dataRows.push({
+          sheetRowIndex:i,
+          room:String(room).trim(),
+          code: colIndex.code>-1? fmtVal(row[colIndex.code]):'',
+          course: colIndex.course>-1? fmtVal(row[colIndex.course]):'',
+          instructor: colIndex.instructor>-1? fmtVal(row[colIndex.instructor]):'',
+          section: colIndex.section>-1? fmtVal(row[colIndex.section]):'',
+          period: colIndex.period>-1? fmtVal(row[colIndex.period]):'',
+          dept: colIndex.dept>-1? fmtVal(row[colIndex.dept]):'',
+          enrolled: colIndex.enrolled>-1? fmtVal(row[colIndex.enrolled]):'',
+          capacity: colIndex.capacity>-1? fmtVal(row[colIndex.capacity]):'',
+          entry: {member:'نعم', student:'نعم', note:''},
+          visited:false,
+        });
+      }
+      if(dataRows.length===0){
+        showUploadError('لم أجد أي صفوف بيانات فيها "رقم قاعة" في هذا الملف.');
+        return;
+      }
+
+      const firstData = aoa[1] || [];
+      meta.campus = colIndex.campus>-1? fmtVal(firstData[colIndex.campus]) : '';
+      meta.date = colIndex.date>-1? fmtVal(firstData[colIndex.date]) : '';
+      meta.day = colIndex.day>-1? fmtVal(firstData[colIndex.day]) : '';
+      meta.semester = colIndex.semester>-1? fmtVal(firstData[colIndex.semester]) : '';
+
+      dataRows.sort(compareRows);
+      storageKey = buildStorageKey();
+      await loadSavedEntries();
+
+      // missing-column warning
+      const missing=[];
+      if(colIndex.member===-1) missing.push('عضو هيئة التدريس');
+      if(colIndex.student===-1) missing.push('الطلاب');
+      if(colIndex.note===-1) missing.push('ملاحظة');
+      const wb = document.getElementById('warningBanner');
+      if(missing.length){
+        wb.textContent = `تنبيه: لم أجد عمود(أعمدة): ${missing.join('، ')} في هذا الملف — لن تُحفظ هذي الحقول عند التصدير.`;
+        wb.classList.remove('hidden');
+      } else {
+        wb.classList.add('hidden');
+      }
+
+      document.getElementById('titleLine').textContent = `زيارة ${meta.campus||''}`.trim();
+      renderAll();
+      document.getElementById('uploadView').classList.add('hidden');
+      document.getElementById('mainView').classList.remove('hidden');
+    }catch(err){
+      console.error(err);
+      showUploadError('تعذّرت قراءة الملف. تأكد أنه ملف إكسل (.xlsx) صحيح وغير تالف.');
+    }
+  });
+
+  // ---------- Rendering ----------
+  function renderAll(){ renderHeader(); renderMap(); renderList(); }
+
+  function renderHeader(){
+    document.getElementById('metaLine').textContent = meta.semester || '';
+    const chips = [];
+    if(meta.campus) chips.push(`<span class="vchip">المقر: <b>${esc(meta.campus)}</b></span>`);
+    if(meta.buildings) chips.push(`<span class="vchip">المبنى: <b>${esc(meta.buildings)}</b></span>`);
+    if(meta.day) chips.push(`<span class="vchip">اليوم: <b>${esc(meta.day)}</b></span>`);
+    if(meta.date) chips.push(`<span class="vchip">التاريخ: <b>${esc(meta.date)}</b></span>`);
+    if(meta.week) chips.push(`<span class="vchip">الأسبوع: <b>${esc(meta.week)}</b></span>`);
+    if(meta.periods) chips.push(`<span class="vchip">الفترة: <b>${esc(meta.periods)}</b></span>`);
+    chips.push(`<span class="vchip">عدد المحاضرات: <b>${dataRows.length}</b></span>`);
+    document.getElementById('visitInfo').innerHTML = chips.join('');
+    const done = dataRows.filter(r=>r.visited).length;
+    document.getElementById('progressText').textContent = `تم رصد ${done} من ${dataRows.length}`;
+    document.getElementById('progressFill').style.width = `${dataRows.length? (done/dataRows.length*100):0}%`;
+  }
+
+  function renderMap(){
+    const el = document.getElementById('mapStrip');
+    el.innerHTML='';
+    dataRows.forEach((r,idx)=>{
+      const tile=document.createElement('div');
+      tile.className = 'map-tile' + (r.visited?' done':'');
+      tile.title = `${r.room} — ${r.course}`;
+      tile.addEventListener('click', ()=>{
+        const card = document.querySelector(`.room-card[data-idx="${idx}"]`);
+        if(card){
+          card.scrollIntoView({behavior:'smooth', block:'center'});
+          card.classList.add('flash');
+          setTimeout(()=>card.classList.remove('flash'),900);
+        }
+      });
+      el.appendChild(tile);
+    });
+  }
+
+  function renderList(){
+    const list = document.getElementById('cardsList');
+    list.innerHTML='';
+    const q = searchQuery.trim();
+    let shown=0;
+    dataRows.forEach((r, idx)=>{
+      if(filterStatus==='pending' && r.visited) return;
+      if(filterStatus==='done' && !r.visited) return;
+      if(q && !`${r.room} ${r.course} ${r.instructor}`.includes(q)) return;
+      shown++;
+      const card=document.createElement('div');
+      card.className='room-card' + (r.visited?' visited':'');
+      card.dataset.idx = idx;
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="room-badges">
+            <span class="room-badge">${esc(r.room)}</span>
+            ${r.code? `<span class="room-badge-alt">${esc(r.code)}</span>` : ''}
+          </div>
+          <span class="status-dot ${r.visited?'done':''}"></span>
+        </div>
+        <div class="card-course">${esc(r.course)}</div>
+        <div class="card-meta">${esc(r.instructor)}${r.section? ' · شعبة '+esc(r.section):''}${r.period? ' · المحاضرة '+esc(r.period):''}</div>
+        <div class="card-meta-sub">${r.enrolled!==''? 'مسجلات: '+esc(r.enrolled):''}${r.capacity!==''? ' / سعة: '+esc(r.capacity):''}</div>
+      `;
+      card.addEventListener('click', ()=> openModal(idx));
+      list.appendChild(card);
+    });
+    if(shown===0){
+      list.innerHTML = `<div class="empty-state">لا توجد قاعات مطابقة لهذا البحث/الفلتر.</div>`;
+    }
+  }
+
+  // ---------- Modal ----------
+  function openModal(idx){
+    activeRowIndex = idx;
+    const r = dataRows[idx];
+    document.getElementById('modalRoom').textContent = r.room;
+    document.getElementById('modalInfo').textContent =
+      `${r.course}${r.instructor? ' — '+r.instructor:''}${r.section? ' — شعبة '+r.section:''}`;
+    document.querySelectorAll('#memberToggle button').forEach(b=> b.classList.toggle('active', b.dataset.value===r.entry.member));
+    document.querySelectorAll('#studentToggle button').forEach(b=> b.classList.toggle('active', b.dataset.value===r.entry.student));
+    document.getElementById('noteInput').value = r.entry.note||'';
+    document.getElementById('clearBtn').classList.toggle('hidden', !r.visited);
+    updateSaveState();
+    document.getElementById('entryModal').classList.remove('hidden');
+  }
+  function closeModal(){
+    document.getElementById('entryModal').classList.add('hidden');
+    activeRowIndex=null;
+  }
+  function updateSaveState(){
+    if(activeRowIndex==null) return;
+    const r=dataRows[activeRowIndex];
+    document.getElementById('saveBtn').disabled = !(r.entry.member && r.entry.student);
+  }
+
+  document.querySelectorAll('#memberToggle button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      dataRows[activeRowIndex].entry.member = b.dataset.value;
+      document.querySelectorAll('#memberToggle button').forEach(x=>x.classList.toggle('active', x===b));
+      updateSaveState();
+    });
+  });
+  document.querySelectorAll('#studentToggle button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      dataRows[activeRowIndex].entry.student = b.dataset.value;
+      document.querySelectorAll('#studentToggle button').forEach(x=>x.classList.toggle('active', x===b));
+      updateSaveState();
+    });
+  });
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    const r=dataRows[activeRowIndex];
+    r.entry.note = document.getElementById('noteInput').value.trim();
+    r.visited = !!(r.entry.member && r.entry.student);
+    closeModal();
+    renderAll();
+    await persistEntries();
+  });
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  document.getElementById('clearBtn').addEventListener('click', async ()=>{
+    const r=dataRows[activeRowIndex];
+    r.entry={member:null,student:null,note:''};
+    r.visited=false;
+    closeModal();
+    renderAll();
+    await persistEntries();
+  });
+
+  // ---------- Search / filter ----------
+  document.getElementById('searchInput').addEventListener('input', (e)=>{ searchQuery=e.target.value; renderList(); });
+  document.querySelectorAll('.filter-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      filterStatus = chip.dataset.filter;
+      renderList();
+    });
+  });
+
+  // ---------- Export ----------
+  document.getElementById('exportBtn').addEventListener('click', async ()=>{
+    const remaining = dataRows.filter(r=>!r.visited).length;
+    if(remaining>0){
+      if(!confirm(`لا يزال هناك ${remaining} قاعة لم تُرصد بعد. تصدير الملف الآن على أي حال؟`)) return;
+    }
+    await exportWorkbook();
+  });
+
+  const OUTPUT_HEADERS_EMBEDDED = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
+    'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
+    'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
+    'المقر', 'التاريخ ', 'اليوم', 'الأسبوع', 'الفصل'];
+
+  async function exportWorkbook(){
+    let outWorkbook, filename;
+    const stamp = new Date().toISOString().slice(0,10);
+
+    if(isEmbeddedMode){
+      const aoa = [OUTPUT_HEADERS_EMBEDDED];
+      dataRows.forEach(r=>{
+        if(!r.visited) return;
+        aoa.push([
+          '', r.entry.note||'', r.entry.student||'', r.entry.member||'',
+          r.dayVal||'', r.weekNoRaw ?? 0, r.facultyCollege||'', r.instructor||'', r.facultyId||'',
+          r.code||'', r.room||'', r.stage||'', r.capacity||'', r.enrolled||'',
+          r.activity||'', r.section||'', r.hours||'', r.course||'', r.courseCode||'',
+          r.studyMode||'', r.dept||'', r.collegeOfCourse||'',
+          meta.campus||'', meta.date||'', meta.day||'', meta.week||'', r.semester||'',
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      outWorkbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(outWorkbook, ws, `${meta.day} - ${meta.buildings}`.slice(0,31) || 'زيارة');
+      filename = `${originalFileName}_معبأ_${stamp}.xlsx`;
+    } else {
+      dataRows.forEach(r=>{
+        if(!r.visited) return;
+        if(colIndex.member>-1){
+          const addr=XLSX.utils.encode_cell({r:r.sheetRowIndex,c:colIndex.member});
+          worksheet[addr] = {t:'s', v:r.entry.member||''};
+        }
+        if(colIndex.student>-1){
+          const addr=XLSX.utils.encode_cell({r:r.sheetRowIndex,c:colIndex.student});
+          worksheet[addr] = {t:'s', v:r.entry.student||''};
+        }
+        if(colIndex.note>-1 && r.entry.note){
+          const addr=XLSX.utils.encode_cell({r:r.sheetRowIndex,c:colIndex.note});
+          worksheet[addr] = {t:'s', v:r.entry.note};
+        }
+      });
+      outWorkbook = workbook;
+      filename = `${originalFileName}_معبأ_${stamp}.xlsx`;
+    }
+
+    // المحاولة الأولى: صفحة المشاركة الأصلية بالجوال (واتساب/إيميل مباشرة بدون البحث عن الملف)
+    try{
+      const wbout = XLSX.write(outWorkbook, {bookType:'xlsx', type:'array'});
+      const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const file = new File([blob], filename, {type: blob.type});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({
+          files:[file],
+          title:'نتيجة الزيارة الميدانية',
+          text:`نتيجة زيارة ${meta.buildings||meta.campus||''} — ${meta.day||''} ${meta.date||''}`.trim()
+        });
+        return;
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError') return; // المستخدم ألغى المشاركة بنفسه
+      console.warn('المشاركة المباشرة غير متاحة بهذا المتصفح، سيتم التنزيل العادي بدلاً منها', err);
+    }
+
+    // احتياطي: تنزيل عادي (يعمل دائماً، لكن يحتاج مشاركة يدوية من مجلد التنزيلات بعدها)
+    XLSX.writeFile(outWorkbook, filename);
+    alert('تم تنزيل الملف إلى مجلد التنزيلات بجهازك. افتح تطبيق الملفات وشاركه من هناك (واتساب/إيميل).');
+  }
+
+  // ---------- ضغط/فك ضغط بيانات الرابط (لوضع الاستضافة عبر رابط) ----------
+  function b64urlToBytes(b64url){
+    let b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length % 4) b64 += '=';
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  async function decompressFromB64Url(b64url){
+    const bytes = b64urlToBytes(b64url);
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+    const text = await new Response(stream).text();
+    return JSON.parse(text);
+  }
+
+  // ---------- Boot ----------
+  (async function boot(){
+    try{
+      const hash = window.location.hash || '';
+      const m = hash.match(/[#&]v=([^&]+)/);
+      if(m && m[1] && typeof DecompressionStream !== 'undefined'){
+        const payload = await decompressFromB64Url(decodeURIComponent(m[1]));
+        await initFromEmbedded(payload);
+        return;
+      }
+    }catch(err){
+      console.error('تعذّر تحميل بيانات الزيارة من الرابط', err);
+      showUploadError('تعذّر قراءة بيانات الزيارة من الرابط. جرّب رفع الملف يدوياً، أو اطلب رابطاً جديداً من المنسّق.');
+    }
+    if(EMBEDDED_VISIT){ initFromEmbedded(EMBEDDED_VISIT); }
+  })();
+
+})();
+</script>
+</body>
+</html>
