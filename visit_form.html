@@ -129,6 +129,24 @@
   .note-group label{display:block;font-size:15.5px;font-weight:700;margin-bottom:8px;}
   #noteInput{width:100%;min-height:80px;border-radius:10px;border:1.5px solid var(--border-clr);
     padding:10px;font-family:inherit;font-size:15.5px;resize:vertical;}
+
+  .photo-group{margin-bottom:16px;padding-top:14px;border-top:1px dashed var(--border-clr);}
+  .photo-group-label{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:700;
+    margin-bottom:10px;color:var(--txt-dark);}
+  .photo-count-badge{background:var(--green-ok-bg);color:var(--green-ok);font-size:12.5px;font-weight:700;
+    padding:3px 10px;border-radius:20px;}
+  #photoDocBtn{width:100%;background:var(--dark-green);color:#fff;font-weight:700;font-size:16px;
+    padding:13px;border:none;border-radius:10px;cursor:pointer;}
+  #photoPreviewWrap{margin-top:12px;border-radius:12px;overflow:hidden;background:#111827;}
+  #photoCanvas{display:block;width:100%;height:auto;}
+  #photoStatus{min-height:20px;margin-top:10px;font-size:13.5px;color:var(--txt-muted);text-align:center;}
+  .photo-capture-actions{display:flex;gap:8px;margin-top:10px;}
+  .photo-capture-actions button{flex:1;padding:12px;border-radius:9px;border:none;font-weight:700;
+    font-size:14.5px;cursor:pointer;}
+  #photoSendBtn{background:var(--gold-700);color:#fff;}
+  #photoSendBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
+  #photoRetakeBtn{background:var(--gray-100);color:var(--txt-body);}
+
   .modal-actions{display:flex;gap:8px;margin-top:18px;}
   .modal-actions button{flex:1;padding:14px;border-radius:10px;border:none;font-weight:700;font-size:16.5px;cursor:pointer;}
   #cancelBtn{background:var(--gray-100);color:var(--txt-body);}
@@ -247,6 +265,18 @@
       <textarea id="noteInput" placeholder="أي ملاحظة على سير المحاضرة..."></textarea>
     </div>
 
+    <div class="photo-group">
+      <div class="photo-group-label">📷 توثيق بالصور (اختياري) <span id="photoCountLabel" class="photo-count-badge hidden"></span></div>
+      <input type="file" id="photoCameraInput" accept="image/*" capture="environment" class="hidden">
+      <button type="button" id="photoDocBtn">وثّق</button>
+      <div id="photoPreviewWrap" class="hidden"><canvas id="photoCanvas"></canvas></div>
+      <div id="photoStatus"></div>
+      <div id="photoCaptureActions" class="photo-capture-actions hidden">
+        <button type="button" id="photoSendBtn">📤 إرسال</button>
+        <button type="button" id="photoRetakeBtn">🔄 إعادة التصوير</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button id="saveBtn" disabled>حفظ</button>
       <button id="cancelBtn">إلغاء</button>
@@ -278,6 +308,10 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
 
   // ⚠️ ضع هنا رابط Google Apps Script Web App (بعد نشره) — لا رابط افتراضي حقيقي هنا.
   const SHEET_SUBMIT_API = 'https://script.google.com/macros/s/AKfycbxlX44DTmEnIAt21Cbd0i8DcMTIqJVbchJ5sn4-DGQHUXaSP0on7Y9XrAdylaFIFFxe/exec';
+
+  // رفع صور التوثيق إلى Google Drive — نفس السكربت الشغّال المرفق من قبل المستخدم.
+  const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbzVfB3UC3CxmjzX0X0U0xOVLH0XJvhUfDRb917Fb-XNBpHTSzAyMp2fVTVAhUArxZJR-g/exec';
+  const DRIVE_UPLOAD_TOKEN = 'AcademicVisits_UQU_2026';
 
   // ---------- Helpers ----------
   function norm(h){ return (h==null?'':String(h)).trim(); }
@@ -335,7 +369,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       hours:r.hours||'', enrolled:r.enrolled||'', capacity:r.capacity||'', activity:r.activity||'',
       weekNoRaw:r.weekNoRaw ?? 0, facultyCollege:r.facultyCollege||'', facultyId:r.facultyId||'',
       code:r.code||'', stage:r.stage||'', studyMode:r.studyMode||'', semester:r.semester||'',
-      entry:{member:'نعم', student:'نعم', note:''},
+      entry:{member:'نعم', student:'نعم', note:'', photoCount:0},
       visited:false,
     }));
     meta = {
@@ -425,7 +459,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
           dept: colIndex.dept>-1? fmtVal(row[colIndex.dept]):'',
           enrolled: colIndex.enrolled>-1? fmtVal(row[colIndex.enrolled]):'',
           capacity: colIndex.capacity>-1? fmtVal(row[colIndex.capacity]):'',
-          entry: {member:'نعم', student:'نعم', note:''},
+          entry: {member:'نعم', student:'نعم', note:'', photoCount:0},
           visited:false,
         });
       }
@@ -549,6 +583,8 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     document.querySelectorAll('#studentToggle button').forEach(b=> b.classList.toggle('active', b.dataset.value===r.entry.student));
     document.getElementById('noteInput').value = r.entry.note||'';
     document.getElementById('clearBtn').classList.toggle('hidden', !r.visited);
+    resetPhotoCaptureUI();
+    updatePhotoCountLabel();
     updateSaveState();
     document.getElementById('entryModal').classList.remove('hidden');
   }
@@ -587,11 +623,321 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   document.getElementById('cancelBtn').addEventListener('click', closeModal);
   document.getElementById('clearBtn').addEventListener('click', async ()=>{
     const r=dataRows[activeRowIndex];
-    r.entry={member:null,student:null,note:''};
+    r.entry={member:null,student:null,note:'',photoCount:0};
     r.visited=false;
     closeModal();
     renderAll();
     await persistEntries();
+  });
+
+  // ---------- توثيق بالصور: تصوير + طابع زمني + رفع لـGoogle Drive ----------
+  // مُقتبَسة ومُكيَّفة من أداة "تصوير بالتاريخ والوقت" — كل بيانات السياق هنا
+  // تُقرأ تلقائياً من بيانات الزيارة (meta/dataRows)، بلا أي إدخال يدوي من الموظف.
+  let currentPhotoBlob = null;
+  let currentPhotoFileName = '';
+  let currentPhotoCounter = 1;
+
+  function cleanFilePart(value, fallback){
+    const cleaned = String(value||'').trim()
+      .replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    return cleaned || fallback;
+  }
+  function photoCounterStorageKey(employeeCode){ return `camera_counter_${cleanFilePart(employeeCode,'Emp01')}`; }
+  function getNextPhotoCounter(employeeCode){
+    const current = parseInt(localStorage.getItem(photoCounterStorageKey(employeeCode))||'0', 10);
+    return Number.isFinite(current) ? current+1 : 1;
+  }
+  function commitPhotoCounter(employeeCode, value){ localStorage.setItem(photoCounterStorageKey(employeeCode), String(value)); }
+  function formatPhotoCounter(value){ return String(value).padStart(3,'0'); }
+  function formatTimeForFilename(date){ return String(date.getHours()).padStart(2,'0') + String(date.getMinutes()).padStart(2,'0'); }
+  function buildArchiveFileName(date, counterValue, roomVal, employeeVal){
+    const room = cleanFilePart(roomVal, 'UnknownRoom');
+    const employee = cleanFilePart(employeeVal, 'Emp01');
+    const time = formatTimeForFilename(date);
+    return `R-${room}-T-${time}-${employee}-${formatPhotoCounter(counterValue)}.jpg`;
+  }
+  function deriveAcademicYearSemester(semesterStr){
+    const s = String(semesterStr||'').trim();
+    const yearMatch = s.match(/\d{4}\s*\/\s*\d{4}/) || s.match(/\d{4}/);
+    return { academicYear: yearMatch ? yearMatch[0] : s, semester: s };
+  }
+
+  const arabicWeekdaysPhoto = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  function buildTimestampData(now, employeeCodeValue){
+    let hour = now.getHours();
+    const minute = String(now.getMinutes()).padStart(2,'0');
+    const meridiem = hour>=12 ? 'PM' : 'AM';
+    hour = hour % 12; if(hour===0) hour = 12;
+    const time = `${String(hour).padStart(2,'0')}:${minute}`;
+    const date = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
+    const day = arabicWeekdaysPhoto[now.getDay()];
+    return { time, meridiem, date, day, employeeCode: cleanFilePart(employeeCodeValue,'Emp01') };
+  }
+
+  function clampPhoto(value,min,max){ return Math.max(min, Math.min(max, value)); }
+
+  function photoTextWidth(ctx, text, font){
+    ctx.save(); ctx.font = font;
+    const w = ctx.measureText(text).width;
+    ctx.restore();
+    return w;
+  }
+  function fitPhotoFontSize(ctx, text, initialSize, minimumSize, maximumWidth, weight){
+    let size = initialSize;
+    while(size > minimumSize){
+      const font = `${weight} ${size}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+      if(photoTextWidth(ctx, text, font) <= maximumWidth) break;
+      size -= 2;
+    }
+    return Math.max(size, minimumSize);
+  }
+  function measurePhotoTimeGroupWidth(ctx, time, meridiem, timeSize, meridiemSize, gap){
+    const timeFont = `bold ${timeSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    const meridiemFont = `bold ${meridiemSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    return photoTextWidth(ctx,time,timeFont) + gap + photoTextWidth(ctx,meridiem,meridiemFont);
+  }
+  function photoRoundedRect(ctx,x,y,width,height,radius){
+    const r = Math.min(radius, width/2, height/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+width,y,x+width,y+height,r);
+    ctx.arcTo(x+width,y+height,x,y+height,r);
+    ctx.arcTo(x,y+height,x,y,r);
+    ctx.arcTo(x,y,x+width,y,r);
+    ctx.closePath();
+  }
+
+  function drawPhotoTimestamp(ctx, data, width, height){
+    const shortSide = Math.min(width,height);
+    const safeMargin = clampPhoto(Math.round(shortSide*0.055), 28, 110);
+    const maximumTextWidth = width - (safeMargin*2);
+
+    let timeSize = clampPhoto(Math.round(shortSide*0.145), 62, 150);
+    let meridiemSize = clampPhoto(Math.round(timeSize*0.30), 22, 46);
+    let dateSize = clampPhoto(Math.round(timeSize*0.54), 36, 82);
+    let daySize = clampPhoto(Math.round(dateSize*0.48), 22, 40);
+    let tagSize = clampPhoto(Math.round(daySize*0.72), 17, 28);
+    const timeGap = clampPhoto(Math.round(shortSide*0.012), 8, 22);
+
+    timeSize = fitPhotoFontSize(ctx, data.time, timeSize, 48, maximumTextWidth*0.70, 'bold');
+    meridiemSize = clampPhoto(Math.round(timeSize*0.30), 20, 44);
+    while(measurePhotoTimeGroupWidth(ctx,data.time,data.meridiem,timeSize,meridiemSize,timeGap) > maximumTextWidth && timeSize>48){
+      timeSize -= 2;
+      meridiemSize = clampPhoto(Math.round(timeSize*0.30), 20, 44);
+    }
+    dateSize = fitPhotoFontSize(ctx, data.date, dateSize, 32, maximumTextWidth*0.92, 'normal');
+    daySize = fitPhotoFontSize(ctx, data.day, daySize, 20, maximumTextWidth*0.80, 'normal');
+    tagSize = fitPhotoFontSize(ctx, data.employeeCode, tagSize, 15, maximumTextWidth*0.88, 'normal');
+
+    const lineGap = clampPhoto(Math.round(shortSide*0.014), 8, 22);
+    const smallGap = clampPhoto(Math.round(shortSide*0.008), 5, 14);
+
+    function calcBlockHeight(){
+      return timeSize*1.02 + lineGap + dateSize*1.08 + smallGap + daySize*1.12 + smallGap + tagSize*1.18;
+    }
+    const maxBlockHeight = height - (safeMargin*2);
+    let blockHeight = calcBlockHeight();
+    if(blockHeight > maxBlockHeight){
+      const ratio = maxBlockHeight/blockHeight;
+      timeSize = Math.max(42, Math.floor(timeSize*ratio));
+      meridiemSize = Math.max(18, Math.floor(meridiemSize*ratio));
+      dateSize = Math.max(28, Math.floor(dateSize*ratio));
+      daySize = Math.max(18, Math.floor(daySize*ratio));
+      tagSize = Math.max(14, Math.floor(tagSize*ratio));
+      blockHeight = calcBlockHeight();
+    }
+
+    const blockBottom = height - safeMargin;
+    const blockTop = Math.max(safeMargin, blockBottom - blockHeight);
+    const centerX = width/2;
+    const boxPaddingX = clampPhoto(Math.round(shortSide*0.030), 18, 58);
+    const boxPaddingY = clampPhoto(Math.round(shortSide*0.022), 14, 42);
+    const boxWidth = Math.min(width-(safeMargin*2), maximumTextWidth);
+    const boxX = (width-boxWidth)/2;
+    const boxY = Math.max(safeMargin, blockTop-boxPaddingY);
+    const boxBottom = Math.min(height-safeMargin, blockBottom+boxPaddingY);
+    const boxHeight = boxBottom - boxY;
+
+    ctx.save();
+    photoRoundedRect(ctx, boxX, boxY, boxWidth, boxHeight, clampPhoto(Math.round(shortSide*0.025),14,42));
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.97)';
+    ctx.shadowColor = 'rgba(0,0,0,0.28)';
+    ctx.shadowBlur = clampPhoto(Math.round(shortSide*0.008),4,14);
+    ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 2;
+    ctx.textBaseline = 'middle';
+
+    let currentY = blockTop + (timeSize*0.51);
+    ctx.direction = 'ltr';
+    const groupWidth = measurePhotoTimeGroupWidth(ctx,data.time,data.meridiem,timeSize,meridiemSize,timeGap);
+    const groupStartX = centerX - (groupWidth/2);
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${timeSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    ctx.fillText(data.time, groupStartX, currentY);
+    ctx.font = `bold ${meridiemSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    ctx.fillText(data.meridiem, groupStartX + photoTextWidth(ctx,data.time,`bold ${timeSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`) + timeGap, currentY + (timeSize*0.10));
+
+    currentY += (timeSize*0.51) + lineGap + (dateSize*0.54);
+    ctx.textAlign = 'center'; ctx.direction = 'ltr';
+    ctx.font = `normal ${dateSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    ctx.fillText(data.date, centerX, currentY);
+
+    currentY += (dateSize*0.54) + smallGap + (daySize*0.56);
+    ctx.direction = 'rtl';
+    ctx.font = `normal ${daySize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    ctx.fillText(data.day, centerX, currentY);
+
+    currentY += (daySize*0.56) + smallGap + (tagSize*0.59);
+    ctx.direction = 'rtl';
+    ctx.font = `normal ${tagSize}px 'Tajawal','IBM Plex Sans Arabic',Arial,Tahoma,sans-serif`;
+    ctx.fillText(data.employeeCode, centerX, currentY);
+    ctx.restore();
+  }
+
+  async function loadPhotoImage(file){
+    if('createImageBitmap' in window){
+      try{
+        const bitmap = await createImageBitmap(file, {imageOrientation:'from-image'});
+        return { source:bitmap, width:bitmap.width, height:bitmap.height, close:()=>bitmap.close() };
+      }catch(_){ /* fallback below */ }
+    }
+    const url = URL.createObjectURL(file);
+    return new Promise((resolve,reject)=>{
+      const img = new Image();
+      img.onload = ()=>{ URL.revokeObjectURL(url); resolve({source:img, width:img.naturalWidth, height:img.naturalHeight}); };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('تعذّر قراءة الصورة.')); };
+      img.src = url;
+    });
+  }
+  function photoCanvasToBlob(canvas, type, quality){
+    return new Promise((resolve,reject)=>{
+      canvas.toBlob(blob=>{ if(blob) resolve(blob); else reject(new Error('تعذّر إنشاء ملف الصورة.')); }, type, quality);
+    });
+  }
+  function photoBlobToBase64(blob){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const result = String(reader.result||'');
+        const i = result.indexOf(',');
+        if(i===-1){ reject(new Error('تعذّر تحويل الصورة.')); return; }
+        resolve(result.slice(i+1));
+      };
+      reader.onerror = ()=> reject(new Error('تعذّر قراءة الصورة.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function resetPhotoCaptureUI(){
+    currentPhotoBlob = null; currentPhotoFileName = '';
+    document.getElementById('photoPreviewWrap').classList.add('hidden');
+    document.getElementById('photoCaptureActions').classList.add('hidden');
+    document.getElementById('photoDocBtn').classList.remove('hidden');
+    document.getElementById('photoStatus').textContent = '';
+  }
+  function updatePhotoCountLabel(){
+    if(activeRowIndex==null) return;
+    const r = dataRows[activeRowIndex];
+    const n = (r.entry && r.entry.photoCount) || 0;
+    const label = document.getElementById('photoCountLabel');
+    if(n>0){ label.textContent = `${n} صورة موثّقة`; label.classList.remove('hidden'); }
+    else{ label.classList.add('hidden'); }
+  }
+
+  document.getElementById('photoDocBtn').addEventListener('click', ()=> document.getElementById('photoCameraInput').click());
+  document.getElementById('photoRetakeBtn').addEventListener('click', ()=> document.getElementById('photoCameraInput').click());
+
+  document.getElementById('photoCameraInput').addEventListener('change', async ()=>{
+    const input = document.getElementById('photoCameraInput');
+    const file = input.files && input.files[0];
+    if(!file || activeRowIndex==null) return;
+
+    const r = dataRows[activeRowIndex];
+    const employeeCode = (meta.employeeName||'').trim() || 'Emp01';
+    currentPhotoCounter = getNextPhotoCounter(employeeCode);
+    document.getElementById('photoStatus').textContent = 'جارٍ تجهيز الصورة...';
+
+    try{
+      const image = await loadPhotoImage(file);
+      const now = new Date();
+      const canvas = document.getElementById('photoCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const maxSide = 3000;
+      let width = image.width, height = image.height;
+      const scale = Math.min(1, maxSide/Math.max(width,height));
+      width = Math.round(width*scale); height = Math.round(height*scale);
+      canvas.width = width; canvas.height = height;
+      ctx.clearRect(0,0,width,height);
+      ctx.drawImage(image.source, 0,0,width,height);
+
+      const tsData = buildTimestampData(now, employeeCode);
+      drawPhotoTimestamp(ctx, tsData, width, height);
+
+      currentPhotoBlob = await photoCanvasToBlob(canvas, 'image/jpeg', 0.93);
+      currentPhotoFileName = buildArchiveFileName(now, currentPhotoCounter, r.room, employeeCode);
+
+      document.getElementById('photoPreviewWrap').classList.remove('hidden');
+      document.getElementById('photoCaptureActions').classList.remove('hidden');
+      document.getElementById('photoDocBtn').classList.add('hidden');
+      document.getElementById('photoStatus').textContent = 'تمت إضافة الوقت والتاريخ. راجع الصورة ثم اضغط إرسال.';
+      if(image.close) image.close();
+    }catch(err){
+      console.error('تعذّر معالجة الصورة:', err);
+      document.getElementById('photoStatus').textContent = 'تعذّر معالجة الصورة. حاول مرة أخرى.';
+    }finally{
+      input.value = '';
+    }
+  });
+
+  document.getElementById('photoSendBtn').addEventListener('click', async ()=>{
+    if(!currentPhotoBlob || activeRowIndex==null) return;
+    const r = dataRows[activeRowIndex];
+    const employeeCode = (meta.employeeName||'').trim() || 'Emp01';
+    const btn = document.getElementById('photoSendBtn');
+    btn.disabled = true;
+    document.getElementById('photoStatus').textContent = 'جارٍ رفع الصورة إلى Google Drive...';
+
+    try{
+      const imageBase64 = await photoBlobToBase64(currentPhotoBlob);
+      const { academicYear, semester } = deriveAcademicYearSemester(meta.semester||'');
+      const payload = {
+        token: DRIVE_UPLOAD_TOKEN,
+        academicYear, semester,
+        week: String(meta.week||''),
+        campus: meta.campus||'',
+        building: meta.buildings||'',
+        room: r.room||'',
+        employeeCode,
+        fileName: currentPhotoFileName,
+        imageBase64,
+      };
+      // text/plain لتفادي preflight الـCORS مع Google Apps Script (نفس تقنية ميزة التسليم)
+      const response = await fetch(DRIVE_UPLOAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+
+      let result;
+      try{ result = await response.json(); }
+      catch(_){ result = { ok:true, message:'تم إرسال الصورة إلى Google Drive.' }; }
+
+      if(!result.ok){ throw new Error(result.error || 'تعذّر رفع الصورة.'); }
+
+      commitPhotoCounter(employeeCode, currentPhotoCounter);
+      r.entry.photoCount = (r.entry.photoCount||0) + 1;
+      await persistEntries();
+      updatePhotoCountLabel();
+      resetPhotoCaptureUI();
+      document.getElementById('photoStatus').textContent = '✅ تم رفع الصورة بنجاح.';
+    }catch(err){
+      console.error('تعذّر رفع الصورة:', err);
+      document.getElementById('photoStatus').textContent =
+        '⚠️ تعذّر رفع الصورة (' + (err.message||'خطأ غير معروف') + '). تقدر تحاول الإرسال مرة ثانية.';
+    }finally{
+      btn.disabled = false;
+    }
   });
 
   // ---------- Search / filter ----------
