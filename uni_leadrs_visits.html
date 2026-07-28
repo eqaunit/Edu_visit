@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>نموذج الرصد الميداني — وكلاء الجامعة</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.0.0/qr-scanner.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
     --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
@@ -41,7 +41,8 @@
   #scanModal{position:fixed;inset:0;background:#000;z-index:100;display:flex;flex-direction:column;}
   #scanModal.hidden{display:none;}
   #scanVideoWrap{flex:1;position:relative;overflow:hidden;}
-  #scanVideo{width:100%;height:100%;object-fit:cover;}
+  #scanVideo{width:100%;height:100%;}
+  #scanVideo video{width:100% !important;height:100% !important;object-fit:cover;}
   #scanModalHeader{position:absolute;top:0;right:0;left:0;padding:16px;display:flex;justify-content:space-between;
     align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;}
   #scanModalHeader span{color:#fff;font-size:15px;font-weight:700;}
@@ -345,7 +346,10 @@ const MAX_MATCH_DISTANCE_M = 100;
   }
 
   function closeScanModal(){
-    if(qrScannerInstance){ qrScannerInstance.stop(); qrScannerInstance.destroy(); qrScannerInstance = null; }
+    if(qrScannerInstance){
+      qrScannerInstance.stop().then(()=>{ try{ qrScannerInstance.clear(); }catch(e){} }).catch(()=>{});
+      qrScannerInstance = null;
+    }
     els.scanModal.classList.add('hidden');
   }
 
@@ -354,22 +358,24 @@ const MAX_MATCH_DISTANCE_M = 100;
       els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
       return;
     }
-    if(typeof QrScanner === 'undefined'){
+    if(typeof Html5Qrcode === 'undefined'){
       els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
       return;
     }
     els.scanStatus.textContent = '';
     els.scanModal.classList.remove('hidden');
     try{
-      qrScannerInstance = new QrScanner(els.scanVideo, result=>{
-        const scannedText = result && result.data ? result.data : result;
-        handleScanResult(scannedText);
-      }, { returnDetailedScanResult:true, preferredCamera:'environment', highlightScanRegion:true, highlightCodeOutline:true });
-      await qrScannerInstance.start();
+      qrScannerInstance = new Html5Qrcode('scanVideo');
+      await qrScannerInstance.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText)=>{ handleScanResult(decodedText); },
+        ()=>{ /* فشل قراءة إطار بمفرده — طبيعي أثناء البحث عن الباركود، يُتجاهل */ }
+      );
     }catch(err){
       console.warn('تعذّر تشغيل الكاميرا:', err);
       closeScanModal();
-      els.scanStatus.textContent = '⚠️ تعذّر تشغيل الكاميرا (' + (err.message||'خطأ غير معروف') + '). تأكد من منح إذن الكاميرا.';
+      els.scanStatus.textContent = '⚠️ تعذّر تشغيل الكاميرا (' + (err.message||err||'خطأ غير معروف') + '). تأكد من منح إذن الكاميرا.';
     }
   }
 
@@ -542,7 +548,7 @@ const MAX_MATCH_DISTANCE_M = 100;
     <button id="scanCloseBtn">✕</button>
   </div>
   <div id="scanVideoWrap">
-    <video id="scanVideo" muted playsinline></video>
+    <div id="scanVideo"></div>
   </div>
   <div id="scanModalFooter">تأكد من وضوح الإضاءة ووضع الباركود بمنتصف الشاشة</div>
 </div>
