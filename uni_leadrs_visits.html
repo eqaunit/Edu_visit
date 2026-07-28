@@ -354,15 +354,20 @@ const MAX_MATCH_DISTANCE_M = 100;
   }
 
   async function openScanModal(){
+    alert('DEBUG 1: تم الضغط على الزر، الدالة بدأت.');
     els.scanStatus.textContent = '';
     if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
+      alert('DEBUG: توقّف هنا — ROOM_SCAN_API غير مضبوط. القيمة الحالية: ' + ROOM_SCAN_API);
       els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
       return;
     }
+    alert('DEBUG 2: ROOM_SCAN_API مضبوط = ' + ROOM_SCAN_API);
     if(typeof Html5Qrcode === 'undefined'){
+      alert('DEBUG: توقّف هنا — مكتبة Html5Qrcode غير محمَّلة.');
       els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
       return;
     }
+    alert('DEBUG 3: المكتبة محمَّلة بنجاح. جارٍ فتح النافذة...');
 
     els.scanModal.classList.remove('hidden');
     els.scanModalFooter.textContent = 'خطوة ١: تهيئة الماسح...';
