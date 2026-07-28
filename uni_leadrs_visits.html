@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>نموذج الرصد الميداني — وكلاء الجامعة</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.0.0/qr-scanner.min.js"></script>
 <style>
   :root{
     --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
@@ -32,6 +33,25 @@
   #locationStatus{font-size:14px;color:var(--txt-body);line-height:1.6;flex:1;}
   #locationRetryBtn{margin-top:8px;background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
     font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;}
+
+  #scanPlaqueBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:15px;
+    padding:12px;border:none;border-radius:10px;cursor:pointer;margin-top:10px;}
+  #scanStatus{font-size:13px;color:var(--txt-muted);margin-top:8px;text-align:center;min-height:18px;}
+
+  #scanModal{position:fixed;inset:0;background:#000;z-index:100;display:flex;flex-direction:column;}
+  #scanModal.hidden{display:none;}
+  #scanVideoWrap{flex:1;position:relative;overflow:hidden;}
+  #scanVideo{width:100%;height:100%;object-fit:cover;}
+  #scanModalHeader{position:absolute;top:0;right:0;left:0;padding:16px;display:flex;justify-content:space-between;
+    align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;}
+  #scanModalHeader span{color:#fff;font-size:15px;font-weight:700;}
+  #scanCloseBtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:36px;height:36px;
+    font-size:18px;cursor:pointer;}
+  #scanModalFooter{padding:16px;background:#111;color:#fff;font-size:13.5px;text-align:center;}
+
+  #currentLecturePreview{margin-top:10px;background:var(--gray-100);border-radius:9px;padding:10px 12px;
+    font-size:12px;color:var(--txt-muted);white-space:pre-wrap;word-break:break-word;}
+  #currentLecturePreview .cl-label{font-weight:700;color:var(--txt-dark);display:block;margin-bottom:4px;font-size:13px;}
 
   .field{margin-bottom:16px;}
   .field:last-child{margin-bottom:0;}
@@ -87,13 +107,19 @@
         <label>معلومات القاعة (اختياري)</label>
         <input type="text" id="roomInfo" placeholder="رقم القاعة أو أي وصف إضافي..." style="direction:rtl;text-align:right;">
       </div>
+      <div id="currentLecturePreview" class="hidden">
+        <span class="cl-label">معلومات المحاضرة حالياً (من اللوحة الذكية)</span>
+        <span id="currentLectureText"></span>
+      </div>
     </div>
 
     <div class="card" id="locationCard">
       <div id="locationIcon">📍</div>
-      <div>
+      <div style="flex:1;">
         <div id="locationStatus">جارٍ تحديد موقعك...</div>
         <button id="locationRetryBtn" class="hidden">إعادة تحديد الموقع</button>
+        <button id="scanPlaqueBtn">📷 مسح اللوحة الذكية للقاعة</button>
+        <div id="scanStatus"></div>
       </div>
     </div>
 
@@ -161,6 +187,9 @@ const BUILDINGS_DATA = [{"building": "مبنى أ", "campus": "الزاهر - ط
 // ⚠️ ضع هنا رابط Cloudflare Worker (worker_leadership.js) — وسيط لتفادي مشكلة Safari — لا رابط Apps Script مباشر هنا.
 const SHEET_SUBMIT_API = 'https://leadership-visits.eqaunit.workers.dev/';
 
+// ⚠️ ضع هنا رابط Cloudflare Worker الخاص بمسح اللوحات الذكية (worker_room_scan.js) بعد نشره.
+const ROOM_SCAN_API = 'https://room-scan.eqaunit.workers.dev/';
+
 const MAX_MATCH_DISTANCE_M = 100;
 </script>
 <script>
@@ -170,7 +199,9 @@ const MAX_MATCH_DISTANCE_M = 100;
   const els = {};
   ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
    'datetimeInput','agentCode','roomInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
-   'copyReportBtn','formView','thankYouScreen','newReportBtn'
+   'copyReportBtn','formView','thankYouScreen','newReportBtn',
+   'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn',
+   'currentLecturePreview','currentLectureText'
   ].forEach(id=> els[id]=document.getElementById(id));
 
   // ---------- تعبئة الحقول الأساسية ----------
@@ -271,6 +302,112 @@ const MAX_MATCH_DISTANCE_M = 100;
   els.locationRetryBtn.addEventListener('click', requestLocation);
   requestLocation();
 
+  // ---------- مسح اللوحة الذكية للقاعة (باركود) ----------
+  let qrScannerInstance = null;
+  let currentLectureRaw = '';
+
+  function extractRoomIdFromUrl(scannedText){
+    // يقبل الرابط كاملاً (مثل https://uqu.edu.sa/App/BuildingsRoom/2830) أو رقماً مجرداً
+    const match = String(scannedText||'').match(/BuildingsRoom\/(\d+)/i);
+    if(match) return match[1];
+    if(/^\d+$/.test(String(scannedText||'').trim())) return scannedText.trim();
+    return null;
+  }
+
+  function findBuildingIndexByText(buildingCollegeText){
+    if(!buildingCollegeText) return -1;
+    let idx = BUILDINGS_DATA.findIndex(b => b.building === buildingCollegeText);
+    if(idx !== -1) return idx;
+    // مطابقة تقريبية احتياطية لو اختلف التنسيق قليلاً
+    const normalized = buildingCollegeText.replace(/\s+/g,'');
+    idx = BUILDINGS_DATA.findIndex(b => b.building.replace(/\s+/g,'') === normalized);
+    return idx;
+  }
+
+  async function fetchRoomScanData(roomId){
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=> controller.abort(), 20000);
+    try{
+      const response = await fetch(`${ROOM_SCAN_API}?roomId=${encodeURIComponent(roomId)}`, {
+        method:'GET', signal: controller.signal,
+      });
+      let data;
+      try{ data = await response.json(); }
+      catch{ throw new Error('أعاد خادم المسح استجابة غير صالحة.'); }
+      if(!response.ok || !data.success){ throw new Error(data.error || 'تعذّر جلب بيانات القاعة.'); }
+      return data;
+    }catch(error){
+      if(error && error.name==='AbortError') throw new Error('انتهت مهلة الاتصال بخادم المسح.');
+      throw error;
+    }finally{
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function closeScanModal(){
+    if(qrScannerInstance){ qrScannerInstance.stop(); qrScannerInstance.destroy(); qrScannerInstance = null; }
+    els.scanModal.classList.add('hidden');
+  }
+
+  async function openScanModal(){
+    if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
+      els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
+      return;
+    }
+    if(typeof QrScanner === 'undefined'){
+      els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
+      return;
+    }
+    els.scanStatus.textContent = '';
+    els.scanModal.classList.remove('hidden');
+    try{
+      qrScannerInstance = new QrScanner(els.scanVideo, result=>{
+        const scannedText = result && result.data ? result.data : result;
+        handleScanResult(scannedText);
+      }, { returnDetailedScanResult:true, preferredCamera:'environment', highlightScanRegion:true, highlightCodeOutline:true });
+      await qrScannerInstance.start();
+    }catch(err){
+      console.warn('تعذّر تشغيل الكاميرا:', err);
+      closeScanModal();
+      els.scanStatus.textContent = '⚠️ تعذّر تشغيل الكاميرا (' + (err.message||'خطأ غير معروف') + '). تأكد من منح إذن الكاميرا.';
+    }
+  }
+
+  async function handleScanResult(scannedText){
+    const roomId = extractRoomIdFromUrl(scannedText);
+    closeScanModal();
+    if(!roomId){
+      els.scanStatus.textContent = '⚠️ الباركود الممسوح مو بصيغة معروفة. جرّب مرة أخرى أو تأكد من نوع اللوحة.';
+      return;
+    }
+    els.scanStatus.textContent = 'جارٍ جلب بيانات القاعة...';
+    try{
+      const data = await fetchRoomScanData(roomId);
+      if(data.room){ els.roomInfo.value = data.room; }
+      const buildingIdx = findBuildingIndexByText(data.buildingCollege);
+      if(buildingIdx !== -1){
+        els.buildingSelect.value = String(buildingIdx);
+        els.collegeSelect.value = BUILDINGS_DATA[buildingIdx].college || '';
+        els.scanStatus.textContent = '✅ تم التعرّف على القاعة والمبنى تلقائياً من اللوحة الذكية.';
+      }else{
+        els.scanStatus.textContent = '✅ تم قراءة القاعة، لكن المبنى غير موجود بقاعدتنا الحالية — اختر يدوياً.';
+      }
+      currentLectureRaw = data.currentLecture || '';
+      if(currentLectureRaw){
+        els.currentLectureText.textContent = currentLectureRaw;
+        els.currentLecturePreview.classList.remove('hidden');
+      }else{
+        els.currentLecturePreview.classList.add('hidden');
+      }
+    }catch(err){
+      console.warn('تعذّر جلب بيانات القاعة:', err);
+      els.scanStatus.textContent = '⚠️ تعذّر جلب بيانات القاعة (' + (err.message||'خطأ غير معروف') + '). تقدر تعبّي البيانات يدوياً.';
+    }
+  }
+
+  els.scanPlaqueBtn.addEventListener('click', openScanModal);
+  els.scanCloseBtn.addEventListener('click', closeScanModal);
+
   // ---------- التسليم ----------
   function buildReportText(){
     const building = els.buildingSelect.value ? BUILDINGS_DATA[Number(els.buildingSelect.value)].building : '(غير محدَّد)';
@@ -281,6 +418,7 @@ const MAX_MATCH_DISTANCE_M = 100;
       'المبنى: ' + building,
       'الكلية: ' + (els.collegeSelect.value || '—'),
       'معلومات القاعة: ' + (els.roomInfo.value.trim() || '—'),
+      'معلومات المحاضرة حالياً: ' + (currentLectureRaw || '—'),
       'رمز/اسم الوكيل: ' + (els.agentCode.value.trim() || '—'),
       'الملاحظات المرصودة: ' + (checked.length ? checked.join('، ') : '—'),
       'ملاحظات إضافية: ' + (els.notesInput.value.trim() || '—'),
@@ -339,6 +477,7 @@ const MAX_MATCH_DISTANCE_M = 100;
       buildingNumber: b.buildingNumber || '',
       agentCode: els.agentCode.value.trim(),
       roomInfo: els.roomInfo.value.trim(),
+      currentLecture: currentLectureRaw,
       observations: checked.join('، '),
       notes: notes,
     };
@@ -385,6 +524,9 @@ const MAX_MATCH_DISTANCE_M = 100;
     els.collegeSelect.value = '';
     els.agentCode.value = '';
     els.roomInfo.value = '';
+    currentLectureRaw = '';
+    els.currentLecturePreview.classList.add('hidden');
+    els.scanStatus.textContent = '';
     els.notesInput.value = '';
     els.checkList.querySelectorAll('input:checked').forEach(c=> c.checked=false);
     els.datetimeInput.value = nowLocalDatetime();
@@ -394,5 +536,16 @@ const MAX_MATCH_DISTANCE_M = 100;
 
 })();
 </script>
+<div id="scanModal" class="hidden">
+  <div id="scanModalHeader">
+    <span>وجّه الكاميرا نحو الباركود باللوحة</span>
+    <button id="scanCloseBtn">✕</button>
+  </div>
+  <div id="scanVideoWrap">
+    <video id="scanVideo" muted playsinline></video>
+  </div>
+  <div id="scanModalFooter">تأكد من وضوح الإضاءة ووضع الباركود بمنتصف الشاشة</div>
+</div>
+
 </body>
 </html>
