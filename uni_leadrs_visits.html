@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>نموذج الرصد الميداني — وكلاء الجامعة</title>
+<style>
+  :root{
+    --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
+    --gold:#C49A1D; --gold-light:#F0D878; --gold-700:#B87B02;
+    --bg-page:#F7F9F8; --bg-light:#F0FFF4; --bg-white:#ffffff; --border-clr:#A8D5BA;
+    --gray-100:#F3F4F6; --gray-200:#E7E5EB; --gray-500:#8E8B96; --gray-700:#5A5862;
+    --txt-dark:#1C2B20; --txt-body:#2D5A3E; --txt-muted:#4A6A54;
+    --red:#D03A3A; --red-soft:#FEECEC; --green-ok:#2E8B57; --green-ok-bg:#E8F5E9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-page);color:var(--txt-dark);
+    font-family:'Tajawal','Segoe UI',Tahoma,Arial,sans-serif;}
+  .hidden{display:none !important;}
+
+  .app-header{background:#fff;border-bottom:1px solid var(--border-clr);padding:16px 16px 14px;
+    display:flex;align-items:center;gap:12px;}
+  .app-header img{height:44px;}
+  .app-header h1{margin:0;font-size:17px;font-weight:700;color:var(--dark-green);}
+  .app-header .subtitle{font-size:13px;color:var(--txt-muted);margin-top:2px;}
+
+  .main{max-width:640px;margin:0 auto;padding:16px 14px 100px;}
+  .card{background:#fff;border:1px solid var(--border-clr);border-radius:14px;padding:18px;margin-bottom:14px;}
+
+  #locationCard{display:flex;align-items:flex-start;gap:10px;background:var(--bg-light);}
+  #locationIcon{font-size:22px;line-height:1.3;}
+  #locationStatus{font-size:14px;color:var(--txt-body);line-height:1.6;flex:1;}
+  #locationRetryBtn{margin-top:8px;background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
+    font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;}
+
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:14.5px;font-weight:700;margin-bottom:8px;color:var(--txt-dark);}
+  .field select, .field input[type=text], .field input[type=datetime-local], .field textarea{
+    width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border-clr);
+    font-size:15px;font-family:inherit;background:var(--bg-page);color:var(--txt-dark);}
+  .field textarea{min-height:90px;resize:vertical;}
+  .field-hint{font-size:12px;color:var(--txt-muted);margin-top:6px;}
+
+  .check-list{display:flex;flex-direction:column;gap:2px;}
+  .check-item{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:10px;cursor:pointer;}
+  .check-item:active{background:var(--bg-light);}
+  .check-item input{width:20px;height:20px;flex-shrink:0;accent-color:var(--dark-green);}
+  .check-item span{font-size:15px;color:var(--txt-dark);}
+
+  .submit-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border-clr);
+    padding:12px 14px;box-shadow:0 -4px 14px rgba(0,0,0,.08);}
+  #submitBtn{width:100%;background:var(--dark-green);color:#fff;font-weight:700;font-size:16.5px;
+    padding:14px;border:none;border-radius:10px;cursor:pointer;}
+  #submitBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
+
+  #submitError{margin-top:10px;background:var(--red-soft);border:1px solid #f5c6c6;border-radius:10px;padding:12px 14px;}
+  #submitErrorMsg{font-size:13.5px;color:var(--red);margin-bottom:10px;}
+  #copyReportBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:14px;
+    padding:11px;border:none;border-radius:9px;cursor:pointer;}
+
+  #thankYouScreen{text-align:center;padding:60px 24px;}
+  #thankYouScreen .ty-icon{font-size:56px;}
+  #thankYouScreen .ty-title{font-size:20px;font-weight:700;color:var(--dark-green);margin-top:14px;}
+  #thankYouScreen .ty-body{font-size:15px;color:var(--txt-body);margin-top:10px;line-height:1.8;}
+  #newReportBtn{margin-top:20px;background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
+    font-size:14px;padding:10px 20px;border-radius:9px;cursor:pointer;}
+
+  noscript{display:block;background:var(--green-ok-bg);color:var(--dark-green);padding:16px;text-align:center;font-size:14px;}
+</style>
+</head>
+<body>
+
+<noscript>لتشغيل هذا النموذج، افتح الرابط داخل متصفح يدعم جافاسكربت (سفاري أو كروم).</noscript>
+
+<div id="formView">
+  <div class="app-header">
+    <div>
+      <h1>نموذج الرصد الميداني</h1>
+      <div class="subtitle">وكلاء الجامعة — وكالة الجامعة للشؤون الأكاديمية</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card" id="locationCard">
+      <div id="locationIcon">📍</div>
+      <div>
+        <div id="locationStatus">جارٍ تحديد موقعك...</div>
+        <button id="locationRetryBtn" class="hidden">إعادة تحديد الموقع</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>المبنى</label>
+        <select id="buildingSelect"><option value="">اختر المبنى...</option></select>
+      </div>
+      <div class="field">
+        <label>الكلية</label>
+        <select id="collegeSelect"><option value="">— بدون كلية محدَّدة —</option></select>
+        <div class="field-hint">تُعبَّى تلقائياً حسب المبنى المختار، ويمكن تغييرها.</div>
+      </div>
+      <div class="field">
+        <label>الوقت والتاريخ</label>
+        <input type="datetime-local" id="datetimeInput">
+      </div>
+      <div class="field">
+        <label>رمز أو اسم الوكيل (اختياري)</label>
+        <input type="text" id="agentCode" placeholder="مثال: MS01" style="direction:rtl;text-align:right;">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label>رصد الملاحظات (اختيار متعدد)</label>
+        <div class="check-list" id="checkList">
+          <label class="check-item"><input type="checkbox" value="طلاب بدون محاضر"><span>طلاب بدون محاضر</span></label>
+          <label class="check-item"><input type="checkbox" value="محاضر بدون طلبة"><span>محاضر بدون طلبة</span></label>
+          <label class="check-item"><input type="checkbox" value="مشكلة فنية في القاعة (أعطال/صيانة)"><span>مشكلة فنية في القاعة (أعطال/صيانة)</span></label>
+          <label class="check-item"><input type="checkbox" value="مخالفة الزي الوطني (طلاب)"><span>مخالفة الزي الوطني (طلاب)</span></label>
+          <label class="check-item"><input type="checkbox" value="مخالفة الزي الوطني (المحاضر)"><span>مخالفة الزي الوطني (المحاضر)</span></label>
+          <label class="check-item"><input type="checkbox" value="أخرى"><span>أخرى</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label>ملاحظات إضافية</label>
+        <textarea id="notesInput" placeholder="اكتب أي تفاصيل إضافية هنا..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <button id="submitBtn">إرسال</button>
+    <div id="submitError" class="hidden">
+      <div id="submitErrorMsg"></div>
+      <button id="copyReportBtn">📋 نسخ التقرير كنص احتياطي</button>
+    </div>
+  </div>
+</div>
+
+<div id="thankYouScreen" class="hidden">
+  <div class="ty-icon">✅</div>
+  <div class="ty-title">شكراً لكم</div>
+  <div class="ty-body">تم تسجيل الملاحظة بنجاح.</div>
+  <button id="newReportBtn">تسجيل ملاحظة جديدة</button>
+</div>
+
+<script>
+const BUILDINGS_DATA = [{"building": "مبنى أ", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439876599852, "lng": 39.807892088735}, {"building": "مبنى ب", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.43957290591, "lng": 39.808846017363}, {"building": "مبنى ج", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440414938323, "lng": 39.809567099786}, {"building": "مبنى ح", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.441231489275, "lng": 39.810217962093}, {"building": "مبنى د", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.441033560372, "lng": 39.808549181266}, {"building": "مبنى ز", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439872516816, "lng": 39.809285874862}, {"building": "مبنى ط", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440786463967, "lng": 39.810605372508}, {"building": "مبنى هـ", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440736994138, "lng": 39.808692693419}, {"building": "مبنى و", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439951707806, "lng": 39.808131966937}, {"building": "مبني ي", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439788058571, "lng": 39.810579759598}, {"building": "المسار الصحي -طالبات", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.327898, "lng": 39.942283}, {"building": "مبنى 2 (الكليات الطبية)طالبات", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.331533, "lng": 39.940467}, {"building": "مبنى 3 (مستشفى طب الأسنان)", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.331945, "lng": 39.94124}, {"building": "مبنى كلية الطب -طالبات (6)", "campus": "العابدية - طالبات", "college": "كلية الطب -طالبات", "buildingNumber": "6", "lat": 21.326837, "lng": 39.942524}, {"building": "معامل وقاعات الكليات الطبية(7)", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "7", "lat": 21.3263645, "lng": 39.9436429}, {"building": "(ت) كلية التربية(38)", "campus": "العابدية - طلاب", "college": "كلية التربية", "buildingNumber": "38", "lat": 21.32782, "lng": 39.9547}, {"building": "(ج)كلية العلوم الاجتماعية(41)", "campus": "العابدية - طلاب", "college": "كلية العلوم الاجتماعية", "buildingNumber": "41", "lat": 21.329144, "lng": 39.954766}, {"building": "(ح) كلية الحاسب الآلي(12)", "campus": "العابدية - طلاب", "college": "كلية الحاسب الآلي", "buildingNumber": "12", "lat": 21.330861, "lng": 39.945973}, {"building": "(ز) كلية اللغة العربية(22)", "campus": "العابدية - طلاب", "college": "كلية اللغة العربية", "buildingNumber": "22", "lat": 21.32937, "lng": 39.95005}, {"building": "(ش) كلية الشريعة(29)", "campus": "العابدية - طلاب", "college": "كلية الشريعة", "buildingNumber": "29", "lat": 21.328486, "lng": 39.951606}, {"building": "(ع) كلية اللغة العربية(22)", "campus": "العابدية - طلاب", "college": "كلية اللغة العربية", "buildingNumber": "22", "lat": 21.329507, "lng": 39.950111}, {"building": "(ق1) مبنى المحاضرات(23)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "23", "lat": 21.328316624147, "lng": 39.949948471975}, {"building": "(ق2) مبنى المحاضرات ق2(24)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "24", "lat": 21.328521, "lng": 39.94934}, {"building": "(ق3) مبنى المحاضرات (25)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "25", "lat": 21.327807, "lng": 39.948393}, {"building": "(ق4)كلية الدراسات القضائية(26)", "campus": "العابدية - طلاب", "college": "كلية الدراسات القضائية", "buildingNumber": "26", "lat": 21.327182, "lng": 39.949176}, {"building": "(ق5) - كلية التمريض (37)", "campus": "العابدية - طلاب", "college": "كلية التمريض", "buildingNumber": "37", "lat": 21.326701, "lng": 39.952794}, {"building": "(ق6)مبنى المحاضرات ق6(36)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "36", "lat": 21.32742596709, "lng": 39.951959237036}, {"building": "(ل)كلية الدعوة وأصول الدين(34)", "campus": "العابدية - طلاب", "college": "كلية الدعوة وأصول الدين", "buildingNumber": "34", "lat": 21.32819, "lng": 39.9529}, {"building": "(ن) كلية ادارة الأعمال(21)", "campus": "العابدية - طلاب", "college": "كلية ادارة الأعمال", "buildingNumber": "21", "lat": 21.33011, "lng": 39.9507}, {"building": "(هـ) كلية الهندسة والعمارة(15)", "campus": "العابدية - طلاب", "college": "كلية الهندسة والعمارة", "buildingNumber": "15", "lat": 21.331443, "lng": 39.949744}, {"building": "الاستاد الرياضي", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3180185, "lng": 39.9490892}, {"building": "الصالة الرياضيه", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3199968, "lng": 39.9460822}, {"building": "اللغة العربية لغيرالناطقين بها", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.33056, "lng": 39.949963}, {"building": "المركز الاجتماعي الرياضي", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3224191, "lng": 39.9433852}, {"building": "كلية التصاميم (ص/و)", "campus": "العابدية - طلاب", "college": "كلية التصاميم", "buildingNumber": "", "lat": 21.33052, "lng": 39.94858}, {"building": "كلية العلوم التطبيقية (14)ملاح", "campus": "العابدية - طلاب", "college": "كلية العلوم التطبيقية", "buildingNumber": "14", "lat": 21.330667174837, "lng": 39.948347990127}, {"building": "كلية طب الأسنان والمستشفى (3)", "campus": "العابدية - طلاب", "college": "كلية طب الأسنان والمستشفى", "buildingNumber": "3", "lat": 21.331262, "lng": 39.941363}, {"building": "مبنى 2 (الكليات الطبية)(2)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "2", "lat": 21.332612, "lng": 39.940539}, {"building": "معامل وقاعات الكليات الطبية(7)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "7", "lat": 21.326632, "lng": 39.944638}, {"building": "مكتبة الملك عبدالله المركزية", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3290622, "lng": 39.9525046}, {"building": "أ ( الكلية التطبيقية)", "campus": "العزيزية - طلاب", "college": "كلية التطبيقية", "buildingNumber": "", "lat": 21.4070712, "lng": 39.8674163}, {"building": "مبنى ب ( كلية المجتمع )", "campus": "العزيزية - طلاب", "college": "كلية المجتمع", "buildingNumber": "", "lat": 21.4069701, "lng": 39.8670697}, {"building": "مبنى د", "campus": "العزيزية - طلاب", "college": "", "buildingNumber": "", "lat": 21.4070868, "lng": 39.866126}, {"building": "مبنى م ( الكلية التطبيقية)", "campus": "العزيزية - طلاب", "college": "كلية التطبيقية", "buildingNumber": "", "lat": 21.4086473, "lng": 39.8645012}, {"building": "ا", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400024108716, "lng": 39.865916926765}, {"building": "ب", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400138957761, "lng": 39.866585404948}, {"building": "ج طالبات رئيسي", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.407231915234, "lng": 39.866959310815}, {"building": "رياضة", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400293343698, "lng": 39.866428270084}];
+
+// ⚠️ ضع هنا رابط Google Apps Script Web App الخاص بهذا النموذج (منفصل عن نموذج الزيارات) بعد نشره.
+const SHEET_SUBMIT_API = 'https://script.google.com/macros/s/AKfycbxVaQLb7f-VWcSB1Lv9spKk8V5tOfJbhBrpVKU49ksx4fKvQIArzFA7j7cF_h2RmF1h/exec';
+
+const MAX_MATCH_DISTANCE_M = 100;
+</script>
+<script>
+(function(){
+  "use strict";
+
+  const els = {};
+  ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
+   'datetimeInput','agentCode','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
+   'copyReportBtn','formView','thankYouScreen','newReportBtn'
+  ].forEach(id=> els[id]=document.getElementById(id));
+
+  // ---------- تعبئة الحقول الأساسية ----------
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function nowLocalDatetime(){
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  els.datetimeInput.value = nowLocalDatetime();
+
+  function populateBuildingSelect(){
+    const opts = BUILDINGS_DATA.map((b,i)=>
+      `<option value="${i}">${escHtml(b.building)} (${escHtml(b.campus)})</option>`).join('');
+    els.buildingSelect.innerHTML = '<option value="">اختر المبنى...</option>' + opts;
+  }
+  function populateCollegeSelect(){
+    const colleges = Array.from(new Set(BUILDINGS_DATA.map(b=>b.college).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
+    els.collegeSelect.innerHTML = '<option value="">— بدون كلية محدَّدة —</option>' +
+      colleges.map(c=>`<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+  }
+  function escHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  populateBuildingSelect();
+  populateCollegeSelect();
+
+  els.buildingSelect.addEventListener('change', ()=>{
+    const idx = els.buildingSelect.value;
+    if(idx===''){ return; }
+    const b = BUILDINGS_DATA[Number(idx)];
+    els.collegeSelect.value = b.college || '';
+  });
+
+  // ---------- تحديد الموقع تلقائياً ----------
+  function haversineMeters(lat1,lng1,lat2,lng2){
+    const R=6371000;
+    const p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+    const dp=(lat2-lat1)*Math.PI/180, dl=(lng2-lng1)*Math.PI/180;
+    const a=Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+  function findNearestBuilding(lat,lng){
+    let best=null, bestIdx=-1;
+    BUILDINGS_DATA.forEach((b,i)=>{
+      const d = haversineMeters(lat,lng,b.lat,b.lng);
+      if(!best || d<best.distance){ best={...b, distance:d}; bestIdx=i; }
+    });
+    return best ? {...best, index:bestIdx} : null;
+  }
+  function geoErrorMessage(err){
+    if(!err) return 'خطأ غير معروف.';
+    switch(err.code){
+      case 1: return 'تم رفض إذن الوصول للموقع.';
+      case 2: return 'تعذّر تحديد الموقع (إشارة GPS غير متاحة).';
+      case 3: return 'انتهت مهلة تحديد الموقع.';
+      default: return err.message || 'خطأ غير معروف.';
+    }
+  }
+  function showManualFallback(msg){
+    els.locationIcon.textContent = '⚠️';
+    els.locationStatus.textContent = msg;
+    els.locationRetryBtn.classList.remove('hidden');
+  }
+  function requestLocation(){
+    els.locationIcon.textContent = '📍';
+    els.locationRetryBtn.classList.add('hidden');
+    if(!navigator.geolocation){
+      showManualFallback('المتصفح لا يدعم تحديد الموقع تلقائياً. اختر الكلية والمبنى يدوياً.');
+      return;
+    }
+    els.locationStatus.textContent = 'جارٍ تحديد موقعك...';
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        const { latitude, longitude } = pos.coords;
+        const match = findNearestBuilding(latitude, longitude);
+        if(match && match.distance <= MAX_MATCH_DISTANCE_M){
+          els.buildingSelect.value = String(match.index);
+          els.collegeSelect.value = match.college || '';
+          els.locationIcon.textContent = '✅';
+          els.locationStatus.textContent = `تم تحديد الموقع: ${match.building} (على بُعد ${Math.round(match.distance)} م تقريباً).`;
+        }else if(match){
+          showManualFallback(`أقرب مبنى معروف "${match.building}" يبعد ${Math.round(match.distance)} م — بعيد جداً للتأكيد التلقائي. اختر المبنى يدوياً.`);
+        }else{
+          showManualFallback('تعذّر إيجاد مبنى قريب معروف بقاعدة البيانات الحالية. اختر الكلية والمبنى يدوياً.');
+        }
+      },
+      err=>{ showManualFallback('تعذّر الوصول لموقعك: ' + geoErrorMessage(err) + ' اختر الكلية والمبنى يدوياً.'); },
+      { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+    );
+  }
+  els.locationRetryBtn.addEventListener('click', requestLocation);
+  requestLocation();
+
+  // ---------- التسليم ----------
+  function buildReportText(){
+    const building = els.buildingSelect.value ? BUILDINGS_DATA[Number(els.buildingSelect.value)].building : '(غير محدَّد)';
+    const checked = Array.from(els.checkList.querySelectorAll('input:checked')).map(c=>c.value);
+    return [
+      'تقرير رصد ميداني',
+      'التاريخ والوقت: ' + (els.datetimeInput.value || ''),
+      'المبنى: ' + building,
+      'الكلية: ' + (els.collegeSelect.value || '—'),
+      'رمز/اسم الوكيل: ' + (els.agentCode.value.trim() || '—'),
+      'الملاحظات المرصودة: ' + (checked.length ? checked.join('، ') : '—'),
+      'ملاحظات إضافية: ' + (els.notesInput.value.trim() || '—'),
+    ].join('\n');
+  }
+
+  async function submitToSheet(payload){
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=> controller.abort(), 20000);
+    try{
+      const response = await fetch(SHEET_SUBMIT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      let data;
+      try{ data = await response.json(); }
+      catch{ throw new Error('أعاد الخادم استجابة غير صالحة.'); }
+      if(!response.ok || !data.success){ throw new Error(data.error || 'تعذّر إرسال التقرير.'); }
+      return data;
+    }catch(error){
+      if(error && error.name==='AbortError') throw new Error('انتهت مهلة الاتصال بالخادم.');
+      throw error;
+    }finally{
+      clearTimeout(timeoutId);
+    }
+  }
+
+  els.submitBtn.addEventListener('click', async ()=>{
+    const buildingIdx = els.buildingSelect.value;
+    const checked = Array.from(els.checkList.querySelectorAll('input:checked')).map(c=>c.value);
+    const notes = els.notesInput.value.trim();
+
+    if(!buildingIdx){
+      alert('اختر المبنى أولاً.');
+      els.buildingSelect.focus();
+      return;
+    }
+    if(checked.length===0 && !notes){
+      alert('حدّد ملاحظة واحدة على الأقل، أو اكتب ملاحظة إضافية.');
+      return;
+    }
+    if(!SHEET_SUBMIT_API || SHEET_SUBMIT_API === 'ضع_هنا_رابط_Google_Apps_Script'){
+      els.submitErrorMsg.textContent = 'لم يُضبط رابط استقبال البيانات بعد داخل الصفحة (SHEET_SUBMIT_API).';
+      els.submitError.classList.remove('hidden');
+      return;
+    }
+
+    const b = BUILDINGS_DATA[Number(buildingIdx)];
+    const payload = {
+      datetime: els.datetimeInput.value || '',
+      college: els.collegeSelect.value || '',
+      building: b.building,
+      campus: b.campus,
+      buildingNumber: b.buildingNumber || '',
+      agentCode: els.agentCode.value.trim(),
+      observations: checked.join('، '),
+      notes: notes,
+    };
+
+    els.submitBtn.disabled = true;
+    const originalLabel = els.submitBtn.textContent;
+    els.submitBtn.textContent = 'جارٍ الإرسال...';
+    els.submitError.classList.add('hidden');
+    try{
+      await submitToSheet(payload);
+      els.formView.classList.add('hidden');
+      els.thankYouScreen.classList.remove('hidden');
+    }catch(err){
+      console.warn('تعذّر إرسال التقرير:', err);
+      els.submitErrorMsg.textContent = 'تعذّر إرسال التقرير (' + (err.message||'خطأ غير معروف') + '). يمكنك نسخ التقرير كنص والتواصل به احتياطياً.';
+      els.submitError.classList.remove('hidden');
+    }finally{
+      els.submitBtn.disabled = false;
+      els.submitBtn.textContent = originalLabel;
+    }
+  });
+
+  els.copyReportBtn.addEventListener('click', async ()=>{
+    const text = buildReportText();
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      }else{
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      els.copyReportBtn.textContent = '✅ تم النسخ';
+      setTimeout(()=> els.copyReportBtn.textContent='📋 نسخ التقرير كنص احتياطي', 1500);
+    }catch(err){
+      alert('تعذّر النسخ التلقائي. النص:\n\n' + text);
+    }
+  });
+
+  els.newReportBtn.addEventListener('click', ()=>{
+    els.thankYouScreen.classList.add('hidden');
+    els.formView.classList.remove('hidden');
+    els.buildingSelect.value = '';
+    els.collegeSelect.value = '';
+    els.agentCode.value = '';
+    els.notesInput.value = '';
+    els.checkList.querySelectorAll('input:checked').forEach(c=> c.checked=false);
+    els.datetimeInput.value = nowLocalDatetime();
+    els.submitError.classList.add('hidden');
+    requestLocation();
+  });
+
+})();
+</script>
+</body>
+</html>
