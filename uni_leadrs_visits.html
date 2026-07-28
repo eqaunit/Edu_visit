@@ -201,7 +201,7 @@ const MAX_MATCH_DISTANCE_M = 100;
   ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
    'datetimeInput','agentCode','roomInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
    'copyReportBtn','formView','thankYouScreen','newReportBtn',
-   'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn',
+   'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn','scanModalFooter',
    'currentLecturePreview','currentLectureText'
   ].forEach(id=> els[id]=document.getElementById(id));
 
@@ -354,6 +354,7 @@ const MAX_MATCH_DISTANCE_M = 100;
   }
 
   async function openScanModal(){
+    els.scanStatus.textContent = '';
     if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
       els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
       return;
@@ -362,20 +363,41 @@ const MAX_MATCH_DISTANCE_M = 100;
       els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
       return;
     }
-    els.scanStatus.textContent = '';
+
     els.scanModal.classList.remove('hidden');
+    els.scanModalFooter.textContent = 'خطوة ١: تهيئة الماسح...';
+
+    let settled = false;
+    const safetyTimeout = setTimeout(()=>{
+      if(settled) return;
+      settled = true;
+      els.scanModalFooter.textContent = '⚠️ الكاميرا تأخّرت أكثر من المتوقّع (أكثر من ١٥ ثانية) — على الأغلب المتصفح يمنع الوصول للكاميرا بصمت. أغلق هذي النافذة وتحقّق من إذن الكاميرا بإعدادات الموقع.';
+    }, 15000);
+
     try{
       qrScannerInstance = new Html5Qrcode('scanVideo');
+      els.scanModalFooter.textContent = 'خطوة ٢: طلب إذن الكاميرا من المتصفح... (لو ظهر لك تنبيه إذن، اضغط "السماح")';
       await qrScannerInstance.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText)=>{ handleScanResult(decodedText); },
+        (decodedText)=>{
+          if(settled) return;
+          settled = true;
+          clearTimeout(safetyTimeout);
+          handleScanResult(decodedText);
+        },
         ()=>{ /* فشل قراءة إطار بمفرده — طبيعي أثناء البحث عن الباركود، يُتجاهل */ }
       );
+      if(!settled){
+        clearTimeout(safetyTimeout);
+        els.scanModalFooter.textContent = 'خطوة ٣: الكاميرا شغّالة — وجّه الكاميرا نحو الباركود بمنتصف الشاشة.';
+      }
     }catch(err){
+      settled = true;
+      clearTimeout(safetyTimeout);
       console.warn('تعذّر تشغيل الكاميرا:', err);
-      closeScanModal();
-      els.scanStatus.textContent = '⚠️ تعذّر تشغيل الكاميرا (' + (err.message||err||'خطأ غير معروف') + '). تأكد من منح إذن الكاميرا.';
+      const errText = (err && (err.message||err.name)) ? (err.message||err.name) : JSON.stringify(err);
+      els.scanModalFooter.textContent = '⚠️ تعذّر تشغيل الكاميرا: ' + errText + ' — تأكد من منح إذن الكاميرا بإعدادات الموقع، أو أغلق النافذة وحاول مرة أخرى.';
     }
   }
 
@@ -550,7 +572,7 @@ const MAX_MATCH_DISTANCE_M = 100;
   <div id="scanVideoWrap">
     <div id="scanVideo"></div>
   </div>
-  <div id="scanModalFooter">تأكد من وضوح الإضاءة ووضع الباركود بمنتصف الشاشة</div>
+  <div id="scanModalFooter">جارٍ البدء...</div>
 </div>
 
 </body>
