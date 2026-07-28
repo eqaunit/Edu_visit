@@ -82,6 +82,13 @@
   </div>
 
   <div class="main">
+    <div class="card">
+      <div class="field" style="margin-bottom:0;">
+        <label>معلومات القاعة (اختياري)</label>
+        <input type="text" id="roomInfo" placeholder="رقم القاعة أو أي وصف إضافي..." style="direction:rtl;text-align:right;">
+      </div>
+    </div>
+
     <div class="card" id="locationCard">
       <div id="locationIcon">📍</div>
       <div>
@@ -162,7 +169,7 @@ const MAX_MATCH_DISTANCE_M = 100;
 
   const els = {};
   ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
-   'datetimeInput','agentCode','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
+   'datetimeInput','agentCode','roomInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
    'copyReportBtn','formView','thankYouScreen','newReportBtn'
   ].forEach(id=> els[id]=document.getElementById(id));
 
@@ -273,6 +280,7 @@ const MAX_MATCH_DISTANCE_M = 100;
       'التاريخ والوقت: ' + (els.datetimeInput.value || ''),
       'المبنى: ' + building,
       'الكلية: ' + (els.collegeSelect.value || '—'),
+      'معلومات القاعة: ' + (els.roomInfo.value.trim() || '—'),
       'رمز/اسم الوكيل: ' + (els.agentCode.value.trim() || '—'),
       'الملاحظات المرصودة: ' + (checked.length ? checked.join('، ') : '—'),
       'ملاحظات إضافية: ' + (els.notesInput.value.trim() || '—'),
@@ -330,6 +338,7 @@ const MAX_MATCH_DISTANCE_M = 100;
       campus: b.campus,
       buildingNumber: b.buildingNumber || '',
       agentCode: els.agentCode.value.trim(),
+      roomInfo: els.roomInfo.value.trim(),
       observations: checked.join('، '),
       notes: notes,
     };
@@ -375,6 +384,7 @@ const MAX_MATCH_DISTANCE_M = 100;
     els.buildingSelect.value = '';
     els.collegeSelect.value = '';
     els.agentCode.value = '';
+    els.roomInfo.value = '';
     els.notesInput.value = '';
     els.checkList.querySelectorAll('input:checked').forEach(c=> c.checked=false);
     els.datetimeInput.value = nowLocalDatetime();
