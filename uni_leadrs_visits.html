@@ -108,6 +108,11 @@
         <label>معلومات القاعة (اختياري)</label>
         <input type="text" id="roomInfo" placeholder="رقم القاعة أو أي وصف إضافي..." style="direction:rtl;text-align:right;">
       </div>
+      <div class="field" style="margin-top:16px;margin-bottom:0;">
+        <label>معلومات المبنى/الكلية كما وردت من اللوحة (اختياري)</label>
+        <input type="text" id="buildingRawInfo" placeholder="يُعبَّى تلقائياً عند المسح، ويمكن تعديله..." style="direction:rtl;text-align:right;">
+        <div class="field-hint">نص احتياطي يُحفَظ دائماً من المسح، حتى لو لم تتطابق القائمة أعلاه تلقائياً.</div>
+      </div>
       <div id="currentLecturePreview" class="hidden">
         <span class="cl-label">معلومات المحاضرة حالياً (من اللوحة الذكية)</span>
         <span id="currentLectureText"></span>
@@ -200,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   const els = {};
   ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
-   'datetimeInput','agentCode','roomInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
+   'datetimeInput','agentCode','roomInfo','buildingRawInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
    'copyReportBtn','formView','thankYouScreen','newReportBtn',
    'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn','scanModalFooter',
    'currentLecturePreview','currentLectureText'
@@ -482,13 +487,14 @@ document.addEventListener('DOMContentLoaded', function(){
     try{
       const data = await fetchRoomScanData(roomId);
       if(data.room){ els.roomInfo.value = data.room; }
+      if(data.buildingCollege){ els.buildingRawInfo.value = data.buildingCollege; }
       const buildingIdx = findBuildingIndexByText(data.buildingCollege);
       if(buildingIdx !== -1){
         els.buildingSelect.value = String(buildingIdx);
         els.collegeSelect.value = BUILDINGS_DATA[buildingIdx].college || '';
         els.scanStatus.textContent = '✅ تم التعرّف على القاعة والمبنى تلقائياً من اللوحة الذكية.';
       }else{
-        els.scanStatus.textContent = '✅ تم قراءة القاعة، لكن المبنى غير موجود بقاعدتنا الحالية — اختر يدوياً.';
+        els.scanStatus.textContent = '⚠️ تم قراءة القاعة، لكن ما تطابق المبنى تلقائياً. النص محفوظ بخانة "معلومات المبنى" أدناه — اختر المبنى يدوياً من القائمة.';
       }
       currentLectureRaw = data.currentLecture || '';
       if(currentLectureRaw){
@@ -516,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function(){
       'المبنى: ' + building,
       'الكلية: ' + (els.collegeSelect.value || '—'),
       'معلومات القاعة: ' + (els.roomInfo.value.trim() || '—'),
+      'معلومات المبنى (خام): ' + (els.buildingRawInfo.value.trim() || '—'),
       'معلومات المحاضرة حالياً: ' + (currentLectureRaw || '—'),
       'رمز/اسم الوكيل: ' + (els.agentCode.value.trim() || '—'),
       'الملاحظات المرصودة: ' + (checked.length ? checked.join('، ') : '—'),
@@ -575,6 +582,7 @@ document.addEventListener('DOMContentLoaded', function(){
       buildingNumber: b.buildingNumber || '',
       agentCode: els.agentCode.value.trim(),
       roomInfo: els.roomInfo.value.trim(),
+      buildingRawInfo: els.buildingRawInfo.value.trim(),
       currentLecture: currentLectureRaw,
       observations: checked.join('، '),
       notes: notes,
@@ -622,6 +630,7 @@ document.addEventListener('DOMContentLoaded', function(){
     els.collegeSelect.value = '';
     els.agentCode.value = '';
     els.roomInfo.value = '';
+    els.buildingRawInfo.value = '';
     currentLectureRaw = '';
     els.currentLecturePreview.classList.add('hidden');
     els.scanStatus.textContent = '';
