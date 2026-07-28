@@ -118,8 +118,8 @@
       <div id="locationIcon">📍</div>
       <div style="flex:1;">
         <div id="locationStatus">جارٍ تحديد موقعك...</div>
-        <button id="locationRetryBtn" class="hidden">إعادة تحديد الموقع</button>
-        <button id="scanPlaqueBtn">📷 مسح اللوحة الذكية للقاعة</button>
+        <button type="button" id="locationRetryBtn" class="hidden">إعادة تحديد الموقع</button>
+        <button type="button" id="scanPlaqueBtn">📷 مسح اللوحة الذكية للقاعة</button>
         <div id="scanStatus"></div>
       </div>
     </div>
@@ -167,10 +167,10 @@
   </div>
 
   <div class="submit-bar">
-    <button id="submitBtn">إرسال</button>
+    <button type="button" id="submitBtn">إرسال</button>
     <div id="submitError" class="hidden">
       <div id="submitErrorMsg"></div>
-      <button id="copyReportBtn">📋 نسخ التقرير كنص احتياطي</button>
+      <button type="button" id="copyReportBtn">📋 نسخ التقرير كنص احتياطي</button>
     </div>
   </div>
 </div>
@@ -179,7 +179,7 @@
   <div class="ty-icon">✅</div>
   <div class="ty-title">شكراً لكم</div>
   <div class="ty-body">تم تسجيل الملاحظة بنجاح.</div>
-  <button id="newReportBtn">تسجيل ملاحظة جديدة</button>
+  <button type="button" id="newReportBtn">تسجيل ملاحظة جديدة</button>
 </div>
 
 <script>
@@ -194,6 +194,7 @@ const ROOM_SCAN_API = 'https://room-scan.eqaunit.workers.dev/';
 const MAX_MATCH_DISTANCE_M = 100;
 </script>
 <script>
+document.addEventListener('DOMContentLoaded', function(){
 (function(){
   "use strict";
 
@@ -204,6 +205,12 @@ const MAX_MATCH_DISTANCE_M = 100;
    'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn','scanModalFooter',
    'currentLecturePreview','currentLectureText'
   ].forEach(id=> els[id]=document.getElementById(id));
+
+  const missingElements = Object.keys(els).filter(id => !els[id]);
+  if(missingElements.length){
+    console.error('عناصر HTML مفقودة:', missingElements);
+    return;
+  }
 
   // ---------- تعبئة الحقول الأساسية ----------
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -345,74 +352,122 @@ const MAX_MATCH_DISTANCE_M = 100;
     }
   }
 
-  function closeScanModal(){
-    if(qrScannerInstance){
-      qrScannerInstance.stop().then(()=>{ try{ qrScannerInstance.clear(); }catch(e){} }).catch(()=>{});
-      qrScannerInstance = null;
+  async function stopQrScanner(){
+    const scanner = qrScannerInstance;
+    qrScannerInstance = null;
+    if(!scanner) return;
+    try{
+      await scanner.stop();
+    }catch(e){
+      // قد لا يكون الماسح قد بدأ بالكامل؛ نتجاهل خطأ الإيقاف في هذه الحالة.
     }
+    try{ scanner.clear(); }catch(e){}
+  }
+
+  function closeScanModal(){
+    stopQrScanner();
     els.scanModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function cameraErrorText(err){
+    const name = err && err.name ? err.name : '';
+    const msg = err && err.message ? err.message : String(err || 'خطأ غير معروف');
+    if(name === 'NotAllowedError' || /permission|denied|notallowed/i.test(msg)){
+      return 'تم رفض إذن الكاميرا. من سفاري اضغط زر aA بجوار العنوان، ثم إعدادات الموقع، ثم الكاميرا: سماح.';
+    }
+    if(name === 'NotFoundError' || /not.?found|no camera/i.test(msg)){
+      return 'لم يعثر المتصفح على كاميرا متاحة.';
+    }
+    if(name === 'NotReadableError' || /not.?readable|could not start/i.test(msg)){
+      return 'الكاميرا مستخدمة من تطبيق آخر أو تعذّر تشغيلها. أغلق تطبيقات الكاميرا ثم أعد تحميل الصفحة.';
+    }
+    if(name === 'OverconstrainedError'){
+      return 'تعذّر اختيار الكاميرا الخلفية بهذه الإعدادات.';
+    }
+    return msg;
+  }
+
+  function scannerConfig(){
+    const side = Math.max(190, Math.min(260, window.innerWidth - 64));
+    return { fps: 8, qrbox: { width: side, height: side } };
+  }
+
+  async function startScannerWithFallback(onSuccess, onFrameError){
+    const config = scannerConfig();
+    qrScannerInstance = new Html5Qrcode('scanVideo');
+    try{
+      // الخيار الأبسط والأكثر توافقاً مع سفاري الحديث.
+      await qrScannerInstance.start(
+        { facingMode: 'environment' }, config, onSuccess, onFrameError
+      );
+      return;
+    }catch(firstError){
+      const firstText = cameraErrorText(firstError);
+      // لا نكرر طلب الإذن إذا رفضه المستخدم صراحةً.
+      if(/رفض إذن|Permission|denied/i.test(firstText)) throw firstError;
+      await stopQrScanner();
+
+      // مسار احتياطي لأجهزة iPhone التي لا تحسم facingMode بصورة صحيحة.
+      const cameras = await Html5Qrcode.getCameras();
+      if(!cameras || !cameras.length) throw firstError;
+      const rearPattern = /back|rear|environment|خلف/i;
+      const preferred = cameras.find(c => rearPattern.test(c.label || '')) || cameras[cameras.length - 1];
+      qrScannerInstance = new Html5Qrcode('scanVideo');
+      await qrScannerInstance.start(preferred.id, config, onSuccess, onFrameError);
+    }
   }
 
   async function openScanModal(){
     els.scanStatus.textContent = '';
+
     if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
       els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
       return;
     }
+    if(!window.isSecureContext){
+      els.scanStatus.textContent = '⚠️ الكاميرا لا تعمل إلا من رابط HTTPS آمن. لا تفتح الملف مباشرة من تطبيق الملفات أو عبر file://.';
+      return;
+    }
+    if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
+      els.scanStatus.textContent = '⚠️ هذا السياق لا يتيح الكاميرا. افتح الرابط مباشرة داخل Safari، وليس داخل معاينة واتساب/البريد أو متصفح مضمّن.';
+      return;
+    }
     if(typeof Html5Qrcode === 'undefined'){
-      els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
+      els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح من الإنترنت. تحقق من الشبكة ثم أعد تحميل الصفحة.';
       return;
     }
 
-    // إظهار إجباري عبر style مباشر (لا يعتمد على أي كلاس CSS قد يتعارض)
-    els.scanModal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:999999;display:flex;flex-direction:column;';
+    await stopQrScanner();
+    els.scanVideo.innerHTML = '';
     els.scanModal.classList.remove('hidden');
-    els.scanModalFooter.textContent = 'خطوة ١: طلب إذن الكاميرا مباشرة (اختبار أوّلي)...';
+    document.body.style.overflow = 'hidden';
+    els.scanModalFooter.textContent = 'جارٍ طلب إذن الكاميرا... اضغط «سماح» عند ظهور الرسالة.';
 
-    // اختبار مباشر لإذن الكاميرا بمعزل عن مكتبة القراءة — يعزل هل المشكلة
-    // بإذن الكاميرا نفسه أو بمكتبة القراءة تحديداً.
-    let rawStream;
-    try{
-      rawStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
-      els.scanModalFooter.textContent = 'خطوة ٢: نجح إذن الكاميرا! جارٍ تشغيل قارئ الباركود...';
-      rawStream.getTracks().forEach(t=>t.stop()); // نوقفه فوراً، المكتبة بتفتح خاصتها
-    }catch(err){
-      const errText = (err && (err.message||err.name)) ? (err.message||err.name) : String(err);
-      els.scanModalFooter.textContent = '⚠️ فشل إذن الكاميرا مباشرة: ' + errText + ' — هذا يعني المشكلة بإذن الكاميرا نفسه، قبل حتى ما توصل لمكتبة القراءة.';
-      return;
-    }
-
-    let settled = false;
+    let scanCompleted = false;
     const safetyTimeout = setTimeout(()=>{
-      if(settled) return;
-      settled = true;
-      els.scanModalFooter.textContent = '⚠️ الكاميرا تأخّرت أكثر من المتوقّع (أكثر من ١٥ ثانية) — على الأغلب المتصفح يمنع الوصول للكاميرا بصمت. أغلق هذي النافذة وتحقّق من إذن الكاميرا بإعدادات الموقع.';
+      if(scanCompleted || els.scanModal.classList.contains('hidden')) return;
+      els.scanModalFooter.textContent = '⚠️ لم تستجب الكاميرا. تحقق من إذن الكاميرا للموقع في Safari ثم أعد تحميل الصفحة.';
     }, 15000);
 
     try{
-      qrScannerInstance = new Html5Qrcode('scanVideo');
-      els.scanModalFooter.textContent = 'خطوة ٣: جارٍ تشغيل عرض الكاميرا داخل الماسح...';
-      await qrScannerInstance.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+      await startScannerWithFallback(
         (decodedText)=>{
-          if(settled) return;
-          settled = true;
+          if(scanCompleted) return;
+          scanCompleted = true;
           clearTimeout(safetyTimeout);
           handleScanResult(decodedText);
         },
-        ()=>{ /* فشل قراءة إطار بمفرده — طبيعي أثناء البحث عن الباركود، يُتجاهل */ }
+        ()=>{ /* عدم وجود رمز في الإطار الحالي أمر طبيعي. */ }
       );
-      if(!settled){
+      if(!scanCompleted){
         clearTimeout(safetyTimeout);
-        els.scanModalFooter.textContent = 'خطوة ٤: الكاميرا شغّالة — وجّه الكاميرا نحو الباركود بمنتصف الشاشة.';
+        els.scanModalFooter.textContent = 'الكاميرا تعمل — وجّهها نحو رمز QR في منتصف الشاشة.';
       }
     }catch(err){
-      settled = true;
       clearTimeout(safetyTimeout);
       console.warn('تعذّر تشغيل الكاميرا:', err);
-      const errText = (err && (err.message||err.name)) ? (err.message||err.name) : JSON.stringify(err);
-      els.scanModalFooter.textContent = '⚠️ تعذّر تشغيل الكاميرا: ' + errText + ' — تأكد من منح إذن الكاميرا بإعدادات الموقع، أو أغلق النافذة وحاول مرة أخرى.';
+      els.scanModalFooter.textContent = '⚠️ ' + cameraErrorText(err);
     }
   }
 
@@ -578,11 +633,12 @@ const MAX_MATCH_DISTANCE_M = 100;
   });
 
 })();
+});
 </script>
 <div id="scanModal" class="hidden">
   <div id="scanModalHeader">
     <span>وجّه الكاميرا نحو الباركود باللوحة</span>
-    <button id="scanCloseBtn">✕</button>
+    <button type="button" id="scanCloseBtn">✕</button>
   </div>
   <div id="scanVideoWrap">
     <div id="scanVideo"></div>
