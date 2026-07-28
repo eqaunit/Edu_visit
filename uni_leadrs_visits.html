@@ -354,23 +354,33 @@ const MAX_MATCH_DISTANCE_M = 100;
   }
 
   async function openScanModal(){
-    alert('DEBUG 1: تم الضغط على الزر، الدالة بدأت.');
     els.scanStatus.textContent = '';
     if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
-      alert('DEBUG: توقّف هنا — ROOM_SCAN_API غير مضبوط. القيمة الحالية: ' + ROOM_SCAN_API);
       els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
       return;
     }
-    alert('DEBUG 2: ROOM_SCAN_API مضبوط = ' + ROOM_SCAN_API);
     if(typeof Html5Qrcode === 'undefined'){
-      alert('DEBUG: توقّف هنا — مكتبة Html5Qrcode غير محمَّلة.');
       els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح. تأكد من اتصالك بالإنترنت وأعد المحاولة.';
       return;
     }
-    alert('DEBUG 3: المكتبة محمَّلة بنجاح. جارٍ فتح النافذة...');
 
+    // إظهار إجباري عبر style مباشر (لا يعتمد على أي كلاس CSS قد يتعارض)
+    els.scanModal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:999999;display:flex;flex-direction:column;';
     els.scanModal.classList.remove('hidden');
-    els.scanModalFooter.textContent = 'خطوة ١: تهيئة الماسح...';
+    els.scanModalFooter.textContent = 'خطوة ١: طلب إذن الكاميرا مباشرة (اختبار أوّلي)...';
+
+    // اختبار مباشر لإذن الكاميرا بمعزل عن مكتبة القراءة — يعزل هل المشكلة
+    // بإذن الكاميرا نفسه أو بمكتبة القراءة تحديداً.
+    let rawStream;
+    try{
+      rawStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+      els.scanModalFooter.textContent = 'خطوة ٢: نجح إذن الكاميرا! جارٍ تشغيل قارئ الباركود...';
+      rawStream.getTracks().forEach(t=>t.stop()); // نوقفه فوراً، المكتبة بتفتح خاصتها
+    }catch(err){
+      const errText = (err && (err.message||err.name)) ? (err.message||err.name) : String(err);
+      els.scanModalFooter.textContent = '⚠️ فشل إذن الكاميرا مباشرة: ' + errText + ' — هذا يعني المشكلة بإذن الكاميرا نفسه، قبل حتى ما توصل لمكتبة القراءة.';
+      return;
+    }
 
     let settled = false;
     const safetyTimeout = setTimeout(()=>{
@@ -381,7 +391,7 @@ const MAX_MATCH_DISTANCE_M = 100;
 
     try{
       qrScannerInstance = new Html5Qrcode('scanVideo');
-      els.scanModalFooter.textContent = 'خطوة ٢: طلب إذن الكاميرا من المتصفح... (لو ظهر لك تنبيه إذن، اضغط "السماح")';
+      els.scanModalFooter.textContent = 'خطوة ٣: جارٍ تشغيل عرض الكاميرا داخل الماسح...';
       await qrScannerInstance.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -395,7 +405,7 @@ const MAX_MATCH_DISTANCE_M = 100;
       );
       if(!settled){
         clearTimeout(safetyTimeout);
-        els.scanModalFooter.textContent = 'خطوة ٣: الكاميرا شغّالة — وجّه الكاميرا نحو الباركود بمنتصف الشاشة.';
+        els.scanModalFooter.textContent = 'خطوة ٤: الكاميرا شغّالة — وجّه الكاميرا نحو الباركود بمنتصف الشاشة.';
       }
     }catch(err){
       settled = true;
