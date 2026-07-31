@@ -68,6 +68,12 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
     <button type="button" class="btn btn-scan" id="btnScan">مسح باركود اللوحة</button>
     <div id="reader"></div>
     <div class="note-bar" id="scanMsg"></div>
+    <div id="diag" style="display:none;margin-top:10px;padding:10px;background:#F7F9F8;border:1px solid var(--border);border-radius:10px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">نصّ الباركود المقروء (انسخه وأرسله):</div>
+      <div id="diagScan" style="font-size:12.5px;direction:ltr;text-align:left;word-break:break-all;background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px;user-select:all;-webkit-user-select:all"></div>
+      <div style="font-size:11px;color:var(--muted);margin:8px 0 4px">ردّ خدمة القراءة:</div>
+      <div id="diagResp" style="font-size:11.5px;direction:ltr;text-align:left;word-break:break-all;background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px;max-height:130px;overflow:auto;user-select:all;-webkit-user-select:all"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -374,6 +380,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function showDiag(scanText, respText) {
+    $('diag').style.display = 'block';
+    $('diagScan').textContent = scanText || '(فارغ)';
+    if (respText !== undefined) $('diagResp').textContent = respText || '(لا يوجد)';
+  }
+
   function onScan(text) {
     stopScanner();
     msg('scanMsg', 'تمت القراءة… جارٍ تحديد القاعة.', 'info');
@@ -381,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var code = extractRoomCode(text);
     if (code) {                       // الباركود يحمل الرمز مباشرة
       msg('scanMsg', 'تم تحديد القاعة من الباركود.', 'ok');
+      $('diag').style.display = 'none';
       applyRoom({ code: code, label: code, source: 'باركود' });
       return;
     }
@@ -394,10 +407,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var flat = data ? JSON.stringify(data) : body;
         var c = extractRoomCode((data && (data.room || data.code || data.name)) || flat);
         if (!c) {
-          msg('scanMsg', 'تعذّر استخراج رمز القاعة من اللوحة. أعد المسح.', 'warn');
+          msg('scanMsg', 'تعذّر استخراج رمز القاعة. انسخ النصّين أدناه وأرسلهما.', 'warn');
+          showDiag(text, flat.slice(0, 1200));
           return;
         }
         msg('scanMsg', 'تم تحديد القاعة.', 'ok');
+        $('diag').style.display = 'none';
         applyRoom({
           code: c,
           label: c,
@@ -407,8 +422,9 @@ document.addEventListener('DOMContentLoaded', function () {
           source: 'باركود'
         });
       })
-      .catch(function () {
-        msg('scanMsg', 'تعذّر الاتصال بخدمة قراءة اللوحة. أعد المسح.', 'warn');
+      .catch(function (err) {
+        msg('scanMsg', 'تعذّر الاتصال بخدمة القراءة. انسخ نصّ الباركود أدناه وأرسله.', 'warn');
+        showDiag(text, 'خطأ اتصال: ' + err.message);
       });
   }
 
