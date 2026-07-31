@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ═════════ إعدادات قابلة للتعديل ═════════ */
 
-  var APP_VERSION = 'v1.5';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
+  var APP_VERSION = 'v1.6';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
 
   // نقطة الإرسال (Cloudflare Worker وسيط -> Apps Script)
   var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';
@@ -547,13 +547,29 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.text().then(function (tx) { return { ok: r.ok, tx: tx }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error(res.tx || 'فشل الإرسال');
-        msg('scanMsg', 'تم تسجيل الرصد بنجاح.', 'ok');
+
+        // ردّ HTTP 200 لا يعني النجاح: Apps Script يردّ 200 حتى عند فشله داخلياً
+        var body = null;
+        try { body = JSON.parse(res.tx); } catch (e) { body = null; }
+        if (body && body.ok === false) {
+          throw new Error(body.error || 'رفض الخادم الحفظ');
+        }
+        if (!body || body.ok !== true) {
+          msg('scanMsg', 'أُرسل، لكن الخادم لم يؤكّد الحفظ. راجع الشيت.', 'warn');
+          showDiag('(إرسال)', res.tx.slice(0, 1200));
+          btn.disabled = false; btn.textContent = 'إرسال';
+          return;
+        }
+
+        msg('scanMsg', 'تم تسجيل الرصد — صفّ رقم ' + (body.row || '?') +
+                       (body.file ? ' في «' + body.file + '»' : '') + '.', 'ok');
         btn.textContent = 'تم الإرسال ✓';
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setTimeout(function () { location.reload(); }, 2200);
       })
       .catch(function (err) {
-        msg('scanMsg', 'تعذّر الإرسال: ' + err.message + ' — أعد المحاولة.', 'warn');
+        msg('scanMsg', 'تعذّر الإرسال: ' + err.message, 'warn');
+        showDiag('(إرسال)', err.message);
         btn.disabled = false; btn.textContent = 'إرسال';
       });
   });
