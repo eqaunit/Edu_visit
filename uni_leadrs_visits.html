@@ -117,6 +117,8 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
 
 </div>
 
+<div style="text-align:center;font-size:11px;color:var(--muted);padding:0 0 8px" id="verTag"></div>
+
 <div class="sendbar">
   <div class="inner">
     <button type="button" class="btn btn-send" id="btnSend" disabled>إرسال</button>
@@ -128,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
 
   /* ═════════ إعدادات قابلة للتعديل ═════════ */
+
+  var APP_VERSION = 'v1.4';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
 
   // نقطة الإرسال (Cloudflare Worker وسيط -> Apps Script)
   var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';
@@ -200,6 +204,23 @@ document.addEventListener('DOMContentLoaded', function () {
     el.textContent = text;
   }
 
+  /** fetch بمهلة: يفشل برسالة واضحة بدل التعليق إلى الأبد. */
+  function fetchT(url, opts, ms) {
+    ms = ms || 15000;
+    opts = opts || {};
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    if (ctl) opts.signal = ctl.signal;
+    var timedOut = false;
+    var to = setTimeout(function () { timedOut = true; if (ctl) ctl.abort(); }, ms);
+    return fetch(url, opts).then(
+      function (r) { clearTimeout(to); return r; },
+      function (e) {
+        clearTimeout(to);
+        throw new Error(timedOut ? ('انتهت المهلة بعد ' + (ms / 1000) + ' ثانية بلا ردّ') : e.message);
+      }
+    );
+  }
+
   /* ═════════ الزمن ═════════ */
 
   // وضع محاكاة للاختبار خارج أوقات الدوام:  ?sim=2026-07-30T09:47
@@ -270,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ═════════ تحميل الجدول ═════════ */
 
   function loadSchedule() {
-    return fetch(SCHEDULE_URL, { cache: 'no-store' })
+    return fetchT(SCHEDULE_URL, { cache: 'no-store' }, 25000)
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
@@ -403,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
     msg('scanMsg', 'تمت القراءة… جارٍ قراءة صفحة القاعة.', 'info');
 
     // الباركود يحمل رابط صفحة القاعة -> الـWorker يقرأها ويُرجع بياناتها
-    fetch(ROOMSCAN_URL + '?url=' + encodeURIComponent(text))
+    fetchT(ROOMSCAN_URL + '?url=' + encodeURIComponent(text), null, 20000)
       .then(function (r) { return r.text(); })
       .then(function (body) {
         var d = null;
@@ -563,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function () {
       'سعة_القاعة': room.capacity || '',
       'مصدر_التحديد': room.source || '',
       'وضع_اختبار': SIM ? 'نعم' : '',
+      'إصدار_النموذج': APP_VERSION,
       // المحاضرة (من الجدول)
       'المقرر': lecture ? (lecture.cr || '') : '',
       'كود_المقرر': lecture ? (lecture.cd || '') : '',
@@ -580,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function () {
       'ملاحظات_حرة': $('freeNote').value.trim()
     };
 
-    fetch(SUBMIT_URL, {
+    fetchT(SUBMIT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -609,6 +631,8 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btnSend').textContent = 'إرسال (وضع اختبار)';
   }
 
+  $('verTag').textContent = 'إصدار ' + APP_VERSION;
+
   refreshClock();
   setInterval(function () {
     refreshClock();
@@ -616,7 +640,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }, 60000);
 
   loadSchedule().then(function (j) {
-    msg('scanMsg', 'جاهز — ' + (j.term || 'الجدول') + ' · ' + Object.keys(j.index).length + ' قاعة.', 'ok');
+    msg('scanMsg', 'جاهز (' + APP_VERSION + ') — ' + (j.term || 'الجدول') + ' · ' + Object.keys(j.index).length + ' قاعة.', 'ok');
   }).catch(function (e) {
     msg('scanMsg', 'تعذّر تحميل الجدول الدراسي (' + e.message + '). سيعمل النموذج دون بيانات المحاضرة.', 'warn');
   });
