@@ -202,7 +202,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ═════════ الزمن ═════════ */
 
+  // وضع محاكاة للاختبار خارج أوقات الدوام:  ?sim=2026-07-30T09:47
+  var SIM = (function () {
+    var m = location.search.match(/[?&]sim=([^&]+)/);
+    if (!m) return null;
+    var d = new Date(decodeURIComponent(m[1]).replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d;
+  })();
+
   function nowKSA() {
+    if (SIM) return SIM;
     // تثبيت المنطقة الزمنية على توقيت السعودية مهما كان ضبط الجهاز
     var s = new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' });
     return new Date(s);
@@ -347,11 +356,11 @@ document.addEventListener('DOMContentLoaded', function () {
       source: info.source || 'باركود'
     };
 
-    // إثراء من الجدول: المقر مأخوذ من بيانات الجامعة نفسها
+    // إثراء من الجدول: بيانات الجدول أوثق من نصّ الصفحة، فلها الأولوية
     if (SCHED && SCHED.rooms[key]) {
       var m = SCHED.rooms[key];
-      room.campus = room.campus || m.cmp;
-      room.code = room.code || m.code;
+      if (m.cmp) room.campus = m.cmp;              // المقر من الجدول يُقدَّم دائماً
+      room.code = m.code || room.code;
       room.label = m.label || room.label;
     }
     // رقم المبنى من بادئة الرمز الموحَّد
@@ -553,6 +562,7 @@ document.addEventListener('DOMContentLoaded', function () {
       'نوع_القاعة': room.type || '',
       'سعة_القاعة': room.capacity || '',
       'مصدر_التحديد': room.source || '',
+      'وضع_اختبار': SIM ? 'نعم' : '',
       // المحاضرة (من الجدول)
       'المقرر': lecture ? (lecture.cr || '') : '',
       'كود_المقرر': lecture ? (lecture.cd || '') : '',
@@ -590,6 +600,14 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ═════════ الإقلاع ═════════ */
+
+  if (SIM) {
+    var bn = document.createElement('div');
+    bn.style.cssText = 'background:#B87B02;color:#fff;padding:9px 14px;text-align:center;font-size:13px;font-weight:700';
+    bn.textContent = 'وضع اختبار — الزمن محاكى: ' + SIM.toLocaleString('ar-SA');
+    document.body.insertBefore(bn, document.body.firstChild);
+    $('btnSend').textContent = 'إرسال (وضع اختبار)';
+  }
 
   refreshClock();
   setInterval(function () {
