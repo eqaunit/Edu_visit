@@ -83,6 +83,7 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
       <div class="f key"><label>المبنى</label><div class="v empty" id="fBuilding">—</div></div>
       <div class="f"><label>المقر</label><div class="v empty" id="fCampus">—</div></div>
       <div class="f"><label>نوع القاعة</label><div class="v empty" id="fRoomType">—</div></div>
+      <div class="f"><label>سعة القاعة</label><div class="v empty" id="fCapacity">—</div></div>
       <div class="f"><label>اليوم</label><div class="v" id="fDay">—</div></div>
       <div class="f"><label>التاريخ</label><div class="v" id="fDate">—</div></div>
       <div class="f"><label>الوقت</label><div class="v" id="fTime">—</div></div>
@@ -342,6 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
       building: info.building || null,
       campus: info.campus || null,
       type: info.type || null,
+      capacity: info.capacity || null,
       source: info.source || 'باركود'
     };
 
@@ -362,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setV('fBuilding', room.building);
     setV('fCampus', room.campus);
     setV('fRoomType', room.type);
+    setV('fCapacity', room.capacity);
 
     findLecture(key);
     $('btnSend').disabled = false;
@@ -388,6 +391,82 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function onScan(text) {
     stopScanner();
+    msg('scanMsg', 'تمت القراءة… جارٍ قراءة صفحة القاعة.', 'info');
+
+    // الباركود يحمل رابط صفحة القاعة -> الـWorker يقرأها ويُرجع بياناتها
+    fetch(ROOMSCAN_URL + '?url=' + encodeURIComponent(text))
+      .then(function (r) { return r.text(); })
+      .then(function (body) {
+        var d = null;
+        try { d = JSON.parse(body); } catch (e) { d = null; }
+
+        if (!d || !d.code) {
+          msg('scanMsg', 'تعذّر استخراج رمز القاعة من الصفحة. انسخ ما أدناه وأرسله.', 'warn');
+          showDiag(text, body.slice(0, 2500));
+          return;
+        }
+
+        msg('scanMsg', 'تم تحديد القاعة من اللوحة.', 'ok');
+        $('diag').style.display = 'none';
+        applyRoom({
+          code: d.code,
+          label: d.code,
+          building: d.building || null,
+          campus: d.campus || null,
+          type: d.roomType || null,
+          capacity: d.capacity || null,
+          source: 'باركود'
+        });
+      })
+      .catch(function (err) {
+        msg('scanMsg', 'تعذّر الاتصال بخدمة القراءة: ' + err.message, 'warn');
+        showDiag(text, 'خطأ اتصال');
+      });
+  }
+
+  function pickCode(body) {
+    var data = null;
+    try { data = JSON.parse(body); } catch (e) { data = null; }
+    var flat = data ? JSON.stringify(data) : body;
+    if (data && data.success === false) return { code: null, data: data, flat: flat };
+    var c = extractRoomCode((data && (data.room || data.code || data.name || data.roomCode)) || flat);
+    return { code: c, data: data, flat: flat };
+  }
+
+  function tryWorker(roomId, rawText, i, log) {
+    if (i >= PARAM_NAMES.length) {
+      msg('scanMsg', 'تعذّر استخراج رمز القاعة. انسخ النصّين أدناه وأرسلهما.', 'warn');
+      showDiag(rawText + '   →   المعرّف: ' + (roomId || 'غير موجود'), log.join('\n\n'));
+      return;
+    }
+    var pname = PARAM_NAMES[i];
+    var url = ROOMSCAN_URL + '?' + pname + '=' + encodeURIComponent(roomId);
+    fetch(url)
+      .then(function (r) { return r.text(); })
+      .then(function (body) {
+        var res = pickCode(body);
+        log.push('?' + pname + '= → ' + body.slice(0, 220));
+        if (!res.code) { tryWorker(roomId, rawText, i + 1, log); return; }
+        msg('scanMsg', 'تم تحديد القاعة (المعامل: ' + pname + ').', 'ok');
+        $('diag').style.display = 'none';
+        var d = res.data;
+        applyRoom({
+          code: res.code,
+          label: res.code,
+          building: d && (d.building || d.buildingName) || null,
+          campus: d && (d.campus || d.site) || null,
+          type: d && (d.type || d.roomType) || null,
+          source: 'باركود'
+        });
+      })
+      .catch(function (err) {
+        log.push('?' + pname + '= → خطأ: ' + err.message);
+        tryWorker(roomId, rawText, i + 1, log);
+      });
+  }
+
+  function onScan(text) {
+    stopScanner();
     msg('scanMsg', 'تمت القراءة… جارٍ تحديد القاعة.', 'info');
 
     var code = extractRoomCode(text);
@@ -398,34 +477,15 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    // وإلا: رابط صفحة القاعة -> Worker وسيط لقراءتها
-    fetch(ROOMSCAN_URL + '?url=' + encodeURIComponent(text))
-      .then(function (r) { return r.text(); })
-      .then(function (body) {
-        var data = null;
-        try { data = JSON.parse(body); } catch (e) { data = null; }
-        var flat = data ? JSON.stringify(data) : body;
-        var c = extractRoomCode((data && (data.room || data.code || data.name)) || flat);
-        if (!c) {
-          msg('scanMsg', 'تعذّر استخراج رمز القاعة. انسخ النصّين أدناه وأرسلهما.', 'warn');
-          showDiag(text, flat.slice(0, 1200));
-          return;
-        }
-        msg('scanMsg', 'تم تحديد القاعة.', 'ok');
-        $('diag').style.display = 'none';
-        applyRoom({
-          code: c,
-          label: c,
-          building: data && (data.building || data.buildingName) || null,
-          campus: data && (data.campus || data.site) || null,
-          type: data && (data.type || data.roomType) || null,
-          source: 'باركود'
-        });
-      })
-      .catch(function (err) {
-        msg('scanMsg', 'تعذّر الاتصال بخدمة القراءة. انسخ نصّ الباركود أدناه وأرسله.', 'warn');
-        showDiag(text, 'خطأ اتصال: ' + err.message);
-      });
+    var roomId = extractRoomId(text);
+    if (!roomId) {
+      msg('scanMsg', 'الباركود لا يحمل رمزاً ولا معرّفاً معروفاً. انسخ نصّه وأرسله.', 'warn');
+      showDiag(text, '(لم يُستدعَ الخادم — لا معرّف)');
+      return;
+    }
+
+    msg('scanMsg', 'المعرّف ' + roomId + ' — جارٍ الاستعلام…', 'info');
+    tryWorker(roomId, text, 0, []);
   }
 
   $('btnScan').addEventListener('click', function () {
@@ -491,6 +551,7 @@ document.addEventListener('DOMContentLoaded', function () {
       'المبنى': room.building || '',
       'المقر': room.campus || '',
       'نوع_القاعة': room.type || '',
+      'سعة_القاعة': room.capacity || '',
       'مصدر_التحديد': room.source || '',
       // المحاضرة (من الجدول)
       'المقرر': lecture ? (lecture.cr || '') : '',
