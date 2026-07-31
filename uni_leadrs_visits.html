@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ═════════ إعدادات قابلة للتعديل ═════════ */
 
-  var APP_VERSION = 'v1.4';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
+  var APP_VERSION = 'v1.5';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
 
   // نقطة الإرسال (Cloudflare Worker وسيط -> Apps Script)
   var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';
@@ -454,69 +454,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   }
 
-  function pickCode(body) {
-    var data = null;
-    try { data = JSON.parse(body); } catch (e) { data = null; }
-    var flat = data ? JSON.stringify(data) : body;
-    if (data && data.success === false) return { code: null, data: data, flat: flat };
-    var c = extractRoomCode((data && (data.room || data.code || data.name || data.roomCode)) || flat);
-    return { code: c, data: data, flat: flat };
-  }
-
-  function tryWorker(roomId, rawText, i, log) {
-    if (i >= PARAM_NAMES.length) {
-      msg('scanMsg', 'تعذّر استخراج رمز القاعة. انسخ النصّين أدناه وأرسلهما.', 'warn');
-      showDiag(rawText + '   →   المعرّف: ' + (roomId || 'غير موجود'), log.join('\n\n'));
-      return;
-    }
-    var pname = PARAM_NAMES[i];
-    var url = ROOMSCAN_URL + '?' + pname + '=' + encodeURIComponent(roomId);
-    fetch(url)
-      .then(function (r) { return r.text(); })
-      .then(function (body) {
-        var res = pickCode(body);
-        log.push('?' + pname + '= → ' + body.slice(0, 220));
-        if (!res.code) { tryWorker(roomId, rawText, i + 1, log); return; }
-        msg('scanMsg', 'تم تحديد القاعة (المعامل: ' + pname + ').', 'ok');
-        $('diag').style.display = 'none';
-        var d = res.data;
-        applyRoom({
-          code: res.code,
-          label: res.code,
-          building: d && (d.building || d.buildingName) || null,
-          campus: d && (d.campus || d.site) || null,
-          type: d && (d.type || d.roomType) || null,
-          source: 'باركود'
-        });
-      })
-      .catch(function (err) {
-        log.push('?' + pname + '= → خطأ: ' + err.message);
-        tryWorker(roomId, rawText, i + 1, log);
-      });
-  }
-
-  function onScan(text) {
-    stopScanner();
-    msg('scanMsg', 'تمت القراءة… جارٍ تحديد القاعة.', 'info');
-
-    var code = extractRoomCode(text);
-    if (code) {                       // الباركود يحمل الرمز مباشرة
-      msg('scanMsg', 'تم تحديد القاعة من الباركود.', 'ok');
-      $('diag').style.display = 'none';
-      applyRoom({ code: code, label: code, source: 'باركود' });
-      return;
-    }
-
-    var roomId = extractRoomId(text);
-    if (!roomId) {
-      msg('scanMsg', 'الباركود لا يحمل رمزاً ولا معرّفاً معروفاً. انسخ نصّه وأرسله.', 'warn');
-      showDiag(text, '(لم يُستدعَ الخادم — لا معرّف)');
-      return;
-    }
-
-    msg('scanMsg', 'المعرّف ' + roomId + ' — جارٍ الاستعلام…', 'info');
-    tryWorker(roomId, text, 0, []);
-  }
 
   $('btnScan').addEventListener('click', function () {
     if (scanning) { stopScanner(); return; }
