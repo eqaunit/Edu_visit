@@ -2,658 +2,531 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>نموذج الرصد الميداني — وكلاء الجامعة</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>رصد ملاحظات المحاضرات — وكالة الجامعة للشؤون الأكاديمية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-  :root{
-    --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
-    --gold:#C49A1D; --gold-light:#F0D878; --gold-700:#B87B02;
-    --bg-page:#F7F9F8; --bg-light:#F0FFF4; --bg-white:#ffffff; --border-clr:#A8D5BA;
-    --gray-100:#F3F4F6; --gray-200:#E7E5EB; --gray-500:#8E8B96; --gray-700:#5A5862;
-    --txt-dark:#1C2B20; --txt-body:#2D5A3E; --txt-muted:#4A6A54;
-    --red:#D03A3A; --red-soft:#FEECEC; --green-ok:#2E8B57; --green-ok-bg:#E8F5E9;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;background:var(--bg-page);color:var(--txt-dark);
-    font-family:'Tajawal','Segoe UI',Tahoma,Arial,sans-serif;}
-  .hidden{display:none !important;}
-
-  .app-header{background:#fff;border-bottom:1px solid var(--border-clr);padding:16px 16px 14px;
-    display:flex;align-items:center;gap:12px;}
-  .app-header img{height:44px;}
-  .app-header h1{margin:0;font-size:17px;font-weight:700;color:var(--dark-green);}
-  .app-header .subtitle{font-size:13px;color:var(--txt-muted);margin-top:2px;}
-
-  .main{max-width:640px;margin:0 auto;padding:16px 14px 100px;}
-  .card{background:#fff;border:1px solid var(--border-clr);border-radius:14px;padding:18px;margin-bottom:14px;}
-
-  #locationCard{display:flex;align-items:flex-start;gap:10px;background:var(--bg-light);}
-  #locationIcon{font-size:22px;line-height:1.3;}
-  #locationStatus{font-size:14px;color:var(--txt-body);line-height:1.6;flex:1;}
-  #locationRetryBtn{margin-top:8px;background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
-    font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;}
-
-  #scanPlaqueBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:15px;
-    padding:12px;border:none;border-radius:10px;cursor:pointer;margin-top:10px;}
-  #scanStatus{font-size:13px;color:var(--txt-muted);margin-top:8px;text-align:center;min-height:18px;}
-
-  #scanModal{position:fixed;inset:0;background:#000;z-index:100;display:flex;flex-direction:column;}
-  #scanModal.hidden{display:none;}
-  #scanVideoWrap{flex:1;position:relative;overflow:hidden;}
-  #scanVideo{width:100%;height:100%;}
-  #scanVideo video{width:100% !important;height:100% !important;object-fit:cover;}
-  #scanModalHeader{position:absolute;top:0;right:0;left:0;padding:16px;display:flex;justify-content:space-between;
-    align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent);z-index:2;}
-  #scanModalHeader span{color:#fff;font-size:15px;font-weight:700;}
-  #scanCloseBtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:36px;height:36px;
-    font-size:18px;cursor:pointer;}
-  #scanModalFooter{padding:16px;background:#111;color:#fff;font-size:13.5px;text-align:center;}
-
-  #currentLecturePreview{margin-top:10px;background:var(--gray-100);border-radius:9px;padding:10px 12px;
-    font-size:12px;color:var(--txt-muted);white-space:pre-wrap;word-break:break-word;}
-  #currentLecturePreview .cl-label{font-weight:700;color:var(--txt-dark);display:block;margin-bottom:4px;font-size:13px;}
-
-  .field{margin-bottom:16px;}
-  .field:last-child{margin-bottom:0;}
-  .field label{display:block;font-size:14.5px;font-weight:700;margin-bottom:8px;color:var(--txt-dark);}
-  .field select, .field input[type=text], .field input[type=datetime-local], .field textarea{
-    width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border-clr);
-    font-size:15px;font-family:inherit;background:var(--bg-page);color:var(--txt-dark);}
-  .field textarea{min-height:90px;resize:vertical;}
-  .field-hint{font-size:12px;color:var(--txt-muted);margin-top:6px;}
-
-  .check-list{display:flex;flex-direction:column;gap:2px;}
-  .check-item{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:10px;cursor:pointer;}
-  .check-item:active{background:var(--bg-light);}
-  .check-item input{width:20px;height:20px;flex-shrink:0;accent-color:var(--dark-green);}
-  .check-item span{font-size:15px;color:var(--txt-dark);}
-
-  .submit-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border-clr);
-    padding:12px 14px;box-shadow:0 -4px 14px rgba(0,0,0,.08);}
-  #submitBtn{width:100%;background:var(--dark-green);color:#fff;font-weight:700;font-size:16.5px;
-    padding:14px;border:none;border-radius:10px;cursor:pointer;}
-  #submitBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
-
-  #submitError{margin-top:10px;background:var(--red-soft);border:1px solid #f5c6c6;border-radius:10px;padding:12px 14px;}
-  #submitErrorMsg{font-size:13.5px;color:var(--red);margin-bottom:10px;}
-  #copyReportBtn{width:100%;background:var(--gold-700);color:#fff;font-weight:700;font-size:14px;
-    padding:11px;border:none;border-radius:9px;cursor:pointer;}
-
-  #thankYouScreen{text-align:center;padding:60px 24px;}
-  #thankYouScreen .ty-icon{font-size:56px;}
-  #thankYouScreen .ty-title{font-size:20px;font-weight:700;color:var(--dark-green);margin-top:14px;}
-  #thankYouScreen .ty-body{font-size:15px;color:var(--txt-body);margin-top:10px;line-height:1.8;}
-  #newReportBtn{margin-top:20px;background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
-    font-size:14px;padding:10px 20px;border-radius:9px;cursor:pointer;}
-
-  noscript{display:block;background:var(--green-ok-bg);color:var(--dark-green);padding:16px;text-align:center;font-size:14px;}
+:root{
+  --dark-green:#1A5632; --light-green:#2D8A4E; --deep-green:#143F28;
+  --gold:#B87B02; --gold-light:#F0D878; --gold-bg:#FFF9E8;
+  --bg:#F4F7F5; --card:#FFFFFF; --border:#D8E9DD; --border-strong:#A8D5BA;
+  --text:#1F2A24; --muted:#6B7C72;
+  --red:#D03A3A; --red-bg:#FEECEC; --ok:#2E8B57; --ok-bg:#E8F5E9;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);font-family:'Cairo',system-ui,-apple-system,sans-serif;color:var(--text);font-size:15px;padding-bottom:90px}
+header{background:linear-gradient(135deg,var(--dark-green),var(--deep-green));color:#fff;padding:18px 16px;text-align:center}
+header h1{margin:0;font-size:18px;font-weight:700}
+header p{margin:4px 0 0;font-size:12px;opacity:.85}
+.wrap{max-width:640px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:15px;color:var(--dark-green);display:flex;align-items:center;gap:8px}
+.card h2::before{content:'';width:4px;height:16px;background:var(--gold);border-radius:2px}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.btn-scan{background:var(--dark-green);color:#fff}
+.btn-scan:active{background:var(--light-green)}
+.btn-send{background:var(--gold);color:#fff}
+.btn-send:disabled{background:#C9D3CD;color:#fff}
+#reader{margin-top:12px;border-radius:12px;overflow:hidden;display:none}
+#reader.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.f{background:#FAFCFB;border:1px solid var(--border);border-radius:10px;padding:9px 11px;min-height:56px}
+.f.full{grid-column:1 / -1}
+.f label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.f .v{font-size:15px;font-weight:600;line-height:1.45;word-break:break-word}
+.f .v.empty{color:#B4C0B9;font-weight:400}
+.f.key{background:var(--gold-bg);border-color:var(--gold-light)}
+.note-bar{padding:11px 13px;border-radius:10px;font-size:13.5px;line-height:1.6;margin-bottom:12px;display:none}
+.note-bar.on{display:block}
+.note-bar.warn{background:var(--red-bg);color:#9B2020;border:1px solid #F3C9C9}
+.note-bar.ok{background:var(--ok-bg);color:#1B5E37;border:1px solid #A8E6CF}
+.note-bar.info{background:#EEF4F1;color:var(--muted);border:1px solid var(--border)}
+.chk{display:flex;align-items:center;gap:11px;padding:12px 11px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none}
+.chk input{width:21px;height:21px;accent-color:var(--dark-green);flex:none;margin:0}
+.chk.sel{background:var(--gold-bg);border-color:var(--gold)}
+.chk span{font-size:14.5px}
+textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:15px;resize:vertical}
+.sendbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:11px 14px;box-shadow:0 -3px 14px rgba(0,0,0,.07)}
+.sendbar .inner{max-width:640px;margin:0 auto}
+.hidden{display:none !important}
+.multi{font-size:12px;color:var(--gold);margin-top:8px;display:none}
+.multi.on{display:block}
 </style>
 </head>
 <body>
 
-<noscript>لتشغيل هذا النموذج، افتح الرابط داخل متصفح يدعم جافاسكربت (سفاري أو كروم).</noscript>
+<header>
+  <h1>رصد ملاحظات المحاضرات</h1>
+  <p>وكالة الجامعة للشؤون الأكاديمية · وحدة ضمان الجودة التعليمية</p>
+</header>
 
-<div id="formView">
-  <div class="app-header">
-    <div>
-      <h1>نموذج الرصد الميداني</h1>
-      <div class="subtitle">وكلاء الجامعة — وكالة الجامعة للشؤون الأكاديمية</div>
+<div class="wrap">
+
+  <div class="card">
+    <h2>تحديد القاعة</h2>
+    <button type="button" class="btn btn-scan" id="btnScan">مسح باركود اللوحة</button>
+    <div id="reader"></div>
+    <div class="note-bar" id="scanMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>بيانات القاعة والزمن</h2>
+    <div class="grid">
+      <div class="f key"><label>رقم القاعة</label><div class="v empty" id="fRoom">—</div></div>
+      <div class="f key"><label>المبنى</label><div class="v empty" id="fBuilding">—</div></div>
+      <div class="f"><label>المقر</label><div class="v empty" id="fCampus">—</div></div>
+      <div class="f"><label>نوع القاعة</label><div class="v empty" id="fRoomType">—</div></div>
+      <div class="f"><label>اليوم</label><div class="v" id="fDay">—</div></div>
+      <div class="f"><label>التاريخ</label><div class="v" id="fDate">—</div></div>
+      <div class="f"><label>الوقت</label><div class="v" id="fTime">—</div></div>
+      <div class="f"><label>الفترة الحالية</label><div class="v" id="fPeriod">—</div></div>
     </div>
   </div>
 
-  <div class="main">
-    <div class="card">
-      <div class="field" style="margin-bottom:0;">
-        <label>معلومات القاعة (اختياري)</label>
-        <input type="text" id="roomInfo" placeholder="رقم القاعة أو أي وصف إضافي..." style="direction:rtl;text-align:right;">
-      </div>
-      <div class="field" style="margin-top:16px;margin-bottom:0;">
-        <label>معلومات المبنى/الكلية كما وردت من اللوحة (اختياري)</label>
-        <input type="text" id="buildingRawInfo" placeholder="يُعبَّى تلقائياً عند المسح، ويمكن تعديله..." style="direction:rtl;text-align:right;">
-        <div class="field-hint">نص احتياطي يُحفَظ دائماً من المسح، حتى لو لم تتطابق القائمة أعلاه تلقائياً.</div>
-      </div>
-      <div id="currentLecturePreview" class="hidden">
-        <span class="cl-label">معلومات المحاضرة حالياً (من اللوحة الذكية)</span>
-        <span id="currentLectureText"></span>
-      </div>
+  <div class="card">
+    <h2>المحاضرة الجارية الآن</h2>
+    <div class="note-bar" id="lecMsg"></div>
+    <div class="grid" id="lecGrid">
+      <div class="f full"><label>المقرر</label><div class="v empty" id="fCourse">—</div></div>
+      <div class="f"><label>كود المقرر</label><div class="v empty" id="fCode">—</div></div>
+      <div class="f"><label>الشعبة</label><div class="v empty" id="fSec">—</div></div>
+      <div class="f full"><label>المحاضر</label><div class="v empty" id="fTeacher">—</div></div>
+      <div class="f"><label>النشاط</label><div class="v empty" id="fAct">—</div></div>
+      <div class="f"><label>عدد الطلبة</label><div class="v empty" id="fStu">—</div></div>
+      <div class="f"><label>القسم</label><div class="v empty" id="fDept">—</div></div>
+      <div class="f"><label>الكلية</label><div class="v empty" id="fCol">—</div></div>
+      <div class="f full"><label>فترات المحاضرة</label><div class="v empty" id="fSlots">—</div></div>
     </div>
-
-    <div class="card" id="locationCard">
-      <div id="locationIcon">📍</div>
-      <div style="flex:1;">
-        <div id="locationStatus">جارٍ تحديد موقعك...</div>
-        <button type="button" id="locationRetryBtn" class="hidden">إعادة تحديد الموقع</button>
-        <button type="button" id="scanPlaqueBtn">📷 مسح اللوحة الذكية للقاعة</button>
-        <div id="scanStatus"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="field">
-        <label>الكلية</label>
-        <select id="collegeSelect"><option value="">— بدون كلية محدَّدة —</option></select>
-      </div>
-      <div class="field">
-        <label>المبنى</label>
-        <select id="buildingSelect"><option value="">اختر المبنى...</option></select>
-        <div class="field-hint">اختيار أيّ منهما (الكلية أو المبنى) يعبّي الآخر تلقائياً — ويمكن تعديل الاثنين يدوياً.</div>
-      </div>
-      <div class="field">
-        <label>الوقت والتاريخ</label>
-        <input type="datetime-local" id="datetimeInput">
-      </div>
-      <div class="field">
-        <label>رمز أو اسم الوكيل (اختياري)</label>
-        <input type="text" id="agentCode" placeholder="مثال: MS01" style="direction:rtl;text-align:right;">
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="field" style="margin-bottom:0;">
-        <label>رصد الملاحظات (اختيار متعدد)</label>
-        <div class="check-list" id="checkList">
-          <label class="check-item"><input type="checkbox" value="طلاب بدون محاضر"><span>طلاب بدون محاضر</span></label>
-          <label class="check-item"><input type="checkbox" value="محاضر بدون طلبة"><span>محاضر بدون طلبة</span></label>
-          <label class="check-item"><input type="checkbox" value="مشكلة فنية في القاعة (أعطال/صيانة)"><span>مشكلة فنية في القاعة (أعطال/صيانة)</span></label>
-          <label class="check-item"><input type="checkbox" value="مخالفة الزي الوطني (طلاب)"><span>مخالفة الزي الوطني (طلاب)</span></label>
-          <label class="check-item"><input type="checkbox" value="مخالفة الزي الوطني (المحاضر)"><span>مخالفة الزي الوطني (المحاضر)</span></label>
-          <label class="check-item"><input type="checkbox" value="أخرى"><span>أخرى</span></label>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="field" style="margin-bottom:0;">
-        <label>ملاحظات إضافية</label>
-        <textarea id="notesInput" placeholder="اكتب أي تفاصيل إضافية هنا..."></textarea>
-      </div>
-    </div>
+    <div class="multi" id="fMulti"></div>
   </div>
 
-  <div class="submit-bar">
-    <button type="button" id="submitBtn">إرسال</button>
-    <div id="submitError" class="hidden">
-      <div id="submitErrorMsg"></div>
-      <button type="button" id="copyReportBtn">📋 نسخ التقرير كنص احتياطي</button>
-    </div>
+  <div class="card">
+    <h2>الملاحظات</h2>
+    <div id="notesBox"></div>
+    <label style="font-size:11px;color:var(--muted);display:block;margin:14px 0 4px">ملاحظة حرة (اختيارية)</label>
+    <textarea id="freeNote" placeholder="اكتب ملاحظتك هنا…"></textarea>
+  </div>
+
+</div>
+
+<div class="sendbar">
+  <div class="inner">
+    <button type="button" class="btn btn-send" id="btnSend" disabled>إرسال</button>
   </div>
 </div>
 
-<div id="thankYouScreen" class="hidden">
-  <div class="ty-icon">✅</div>
-  <div class="ty-title">شكراً لكم</div>
-  <div class="ty-body">تم تسجيل الملاحظة بنجاح.</div>
-  <button type="button" id="newReportBtn">تسجيل ملاحظة جديدة</button>
-</div>
-
 <script>
-const BUILDINGS_DATA = [{"building": "مبنى أ", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439876599852, "lng": 39.807892088735}, {"building": "مبنى ب", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.43957290591, "lng": 39.808846017363}, {"building": "مبنى ج", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440414938323, "lng": 39.809567099786}, {"building": "مبنى ح", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.441231489275, "lng": 39.810217962093}, {"building": "مبنى د", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.441033560372, "lng": 39.808549181266}, {"building": "مبنى ز", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439872516816, "lng": 39.809285874862}, {"building": "مبنى ط", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440786463967, "lng": 39.810605372508}, {"building": "مبنى هـ", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.440736994138, "lng": 39.808692693419}, {"building": "مبنى و", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439951707806, "lng": 39.808131966937}, {"building": "مبني ي", "campus": "الزاهر - طالبات", "college": "", "buildingNumber": "", "lat": 21.439788058571, "lng": 39.810579759598}, {"building": "المسار الصحي -طالبات", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.327898, "lng": 39.942283}, {"building": "مبنى 2 (الكليات الطبية)طالبات", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.331533, "lng": 39.940467}, {"building": "مبنى 3 (مستشفى طب الأسنان)", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "", "lat": 21.331945, "lng": 39.94124}, {"building": "مبنى كلية الطب -طالبات (6)", "campus": "العابدية - طالبات", "college": "كلية الطب -طالبات", "buildingNumber": "6", "lat": 21.326837, "lng": 39.942524}, {"building": "معامل وقاعات الكليات الطبية(7)", "campus": "العابدية - طالبات", "college": "", "buildingNumber": "7", "lat": 21.3263645, "lng": 39.9436429}, {"building": "(ت) كلية التربية(38)", "campus": "العابدية - طلاب", "college": "كلية التربية", "buildingNumber": "38", "lat": 21.32782, "lng": 39.9547}, {"building": "(ج)كلية العلوم الاجتماعية(41)", "campus": "العابدية - طلاب", "college": "كلية العلوم الاجتماعية", "buildingNumber": "41", "lat": 21.329144, "lng": 39.954766}, {"building": "(ح) كلية الحاسب الآلي(12)", "campus": "العابدية - طلاب", "college": "كلية الحاسب الآلي", "buildingNumber": "12", "lat": 21.330861, "lng": 39.945973}, {"building": "(ز) كلية اللغة العربية(22)", "campus": "العابدية - طلاب", "college": "كلية اللغة العربية", "buildingNumber": "22", "lat": 21.32937, "lng": 39.95005}, {"building": "(ش) كلية الشريعة(29)", "campus": "العابدية - طلاب", "college": "كلية الشريعة", "buildingNumber": "29", "lat": 21.328486, "lng": 39.951606}, {"building": "(ع) كلية اللغة العربية(22)", "campus": "العابدية - طلاب", "college": "كلية اللغة العربية", "buildingNumber": "22", "lat": 21.329507, "lng": 39.950111}, {"building": "(ق1) مبنى المحاضرات(23)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "23", "lat": 21.328316624147, "lng": 39.949948471975}, {"building": "(ق2) مبنى المحاضرات ق2(24)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "24", "lat": 21.328521, "lng": 39.94934}, {"building": "(ق3) مبنى المحاضرات (25)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "25", "lat": 21.327807, "lng": 39.948393}, {"building": "(ق4)كلية الدراسات القضائية(26)", "campus": "العابدية - طلاب", "college": "كلية الدراسات القضائية", "buildingNumber": "26", "lat": 21.327182, "lng": 39.949176}, {"building": "(ق5) - كلية التمريض (37)", "campus": "العابدية - طلاب", "college": "كلية التمريض", "buildingNumber": "37", "lat": 21.326701, "lng": 39.952794}, {"building": "(ق6)مبنى المحاضرات ق6(36)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "36", "lat": 21.32742596709, "lng": 39.951959237036}, {"building": "(ل)كلية الدعوة وأصول الدين(34)", "campus": "العابدية - طلاب", "college": "كلية الدعوة وأصول الدين", "buildingNumber": "34", "lat": 21.32819, "lng": 39.9529}, {"building": "(ن) كلية ادارة الأعمال(21)", "campus": "العابدية - طلاب", "college": "كلية ادارة الأعمال", "buildingNumber": "21", "lat": 21.33011, "lng": 39.9507}, {"building": "(هـ) كلية الهندسة والعمارة(15)", "campus": "العابدية - طلاب", "college": "كلية الهندسة والعمارة", "buildingNumber": "15", "lat": 21.331443, "lng": 39.949744}, {"building": "الاستاد الرياضي", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3180185, "lng": 39.9490892}, {"building": "الصالة الرياضيه", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3199968, "lng": 39.9460822}, {"building": "اللغة العربية لغيرالناطقين بها", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.33056, "lng": 39.949963}, {"building": "المركز الاجتماعي الرياضي", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3224191, "lng": 39.9433852}, {"building": "كلية التصاميم (ص/و)", "campus": "العابدية - طلاب", "college": "كلية التصاميم", "buildingNumber": "", "lat": 21.33052, "lng": 39.94858}, {"building": "كلية العلوم التطبيقية (14)ملاح", "campus": "العابدية - طلاب", "college": "كلية العلوم التطبيقية", "buildingNumber": "14", "lat": 21.330667174837, "lng": 39.948347990127}, {"building": "كلية طب الأسنان والمستشفى (3)", "campus": "العابدية - طلاب", "college": "كلية طب الأسنان والمستشفى", "buildingNumber": "3", "lat": 21.331262, "lng": 39.941363}, {"building": "مبنى 2 (الكليات الطبية)(2)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "2", "lat": 21.332612, "lng": 39.940539}, {"building": "معامل وقاعات الكليات الطبية(7)", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "7", "lat": 21.326632, "lng": 39.944638}, {"building": "مكتبة الملك عبدالله المركزية", "campus": "العابدية - طلاب", "college": "", "buildingNumber": "", "lat": 21.3290622, "lng": 39.9525046}, {"building": "أ ( الكلية التطبيقية)", "campus": "العزيزية - طلاب", "college": "كلية التطبيقية", "buildingNumber": "", "lat": 21.4070712, "lng": 39.8674163}, {"building": "مبنى ب ( كلية المجتمع )", "campus": "العزيزية - طلاب", "college": "كلية المجتمع", "buildingNumber": "", "lat": 21.4069701, "lng": 39.8670697}, {"building": "مبنى د", "campus": "العزيزية - طلاب", "college": "", "buildingNumber": "", "lat": 21.4070868, "lng": 39.866126}, {"building": "مبنى م ( الكلية التطبيقية)", "campus": "العزيزية - طلاب", "college": "كلية التطبيقية", "buildingNumber": "", "lat": 21.4086473, "lng": 39.8645012}, {"building": "ا", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400024108716, "lng": 39.865916926765}, {"building": "ب", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400138957761, "lng": 39.866585404948}, {"building": "ج طالبات رئيسي", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.407231915234, "lng": 39.866959310815}, {"building": "رياضة", "campus": "مقر الطالبات بالعزيزية", "college": "", "buildingNumber": "", "lat": 21.400293343698, "lng": 39.866428270084}];
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
 
-// ⚠️ ضع هنا رابط Cloudflare Worker (worker_leadership.js) — وسيط لتفادي مشكلة Safari — لا رابط Apps Script مباشر هنا.
-const SHEET_SUBMIT_API = 'https://leadership-visits.eqaunit.workers.dev/';
+  /* ═════════ إعدادات قابلة للتعديل ═════════ */
 
-// ⚠️ ضع هنا رابط Cloudflare Worker الخاص بمسح اللوحات الذكية (worker_room_scan.js) بعد نشره.
-const ROOM_SCAN_API = 'https://room-scan.eqaunit.workers.dev/';
+  // نقطة الإرسال (Cloudflare Worker وسيط -> Apps Script)
+  var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';
+  // Worker قراءة صفحة القاعة من موقع الجامعة (يُستدعى فقط إذا لم يحمل الباركود رمز القاعة)
+  var ROOMSCAN_URL = 'https://room-scan.eqaunit.workers.dev';
+  // ملف الجدول الدراسي المحلي
+  var SCHEDULE_URL = 'schedule_data_summer.json';
 
-const MAX_MATCH_DISTANCE_M = 100;
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-(function(){
-  "use strict";
-
-  const els = {};
-  ['locationCard','locationIcon','locationStatus','locationRetryBtn','buildingSelect','collegeSelect',
-   'datetimeInput','agentCode','roomInfo','buildingRawInfo','checkList','notesInput','submitBtn','submitError','submitErrorMsg',
-   'copyReportBtn','formView','thankYouScreen','newReportBtn',
-   'scanPlaqueBtn','scanStatus','scanModal','scanVideo','scanCloseBtn','scanModalFooter',
-   'currentLecturePreview','currentLectureText'
-  ].forEach(id=> els[id]=document.getElementById(id));
-
-  const missingElements = Object.keys(els).filter(id => !els[id]);
-  if(missingElements.length){
-    console.error('عناصر HTML مفقودة:', missingElements);
-    return;
+  // ★ خريطة أوقات الفترات — الفترة ٥٠ دقيقة، تبدأ رأس الساعة من الثامنة.
+  // شطر الطلاب: بريك 12:00–13:00 وبريك 15:00–16:00، والترقيم يقفز فوقهما (إزاحة ساعة عند كل بريك).
+  // شطر الطالبات: متصل بلا بريك.
+  var GRID_M = [                                   // طلاب
+    null,
+    ['08:00','08:50'], ['09:00','09:50'], ['10:00','10:50'], ['11:00','11:50'],
+    /* بريك 12:00–13:00 */
+    ['13:00','13:50'], ['14:00','14:50'],
+    /* بريك 15:00–16:00 */
+    ['16:00','16:50'], ['17:00','17:50'], ['18:00','18:50'], ['19:00','19:50'],
+    ['20:00','20:50'], ['21:00','21:50']
+  ];
+  var GRID_F = [                                   // طالبات
+    null,
+    ['08:00','08:50'], ['09:00','09:50'], ['10:00','10:50'], ['11:00','11:50'],
+    ['12:00','12:50'], ['13:00','13:50'], ['14:00','14:50'], ['15:00','15:50'],
+    ['16:00','16:50'], ['17:00','17:50'], ['18:00','18:50'], ['19:00','19:50']
+  ];
+  function gridFor(campus) {
+    return (campus && campus.indexOf('طالبات') !== -1) ? GRID_F : GRID_M;
   }
 
-  // ---------- تعبئة الحقول الأساسية ----------
-  function pad(n){ return String(n).padStart(2,'0'); }
-  function nowLocalDatetime(){
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-  els.datetimeInput.value = nowLocalDatetime();
+  // مهلة سماح بالدقائق قبل بداية الفترة وبعد نهايتها (لالتقاط الزيارات على الحواف)
+  var GRACE_MIN = 10;
 
-  function populateBuildingSelect(){
-    const opts = BUILDINGS_DATA.map((b,i)=>
-      `<option value="${i}">${escHtml(b.building)} (${escHtml(b.campus)})</option>`).join('');
-    els.buildingSelect.innerHTML = '<option value="">اختر المبنى...</option>' + opts;
-  }
-  function populateCollegeSelect(){
-    const colleges = Array.from(new Set(BUILDINGS_DATA.map(b=>b.college).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ar'));
-    els.collegeSelect.innerHTML = '<option value="">— بدون كلية محدَّدة —</option>' +
-      colleges.map(c=>`<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
-  }
-  function escHtml(s){
-    return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  populateBuildingSelect();
-  populateCollegeSelect();
+  var NOTE_OPTIONS = [
+    'عدم وجود محاضر',
+    'عدم وجود طلاب',
+    'المحاضر مختلف عن المسجَّل بالجدول',
+    'القاعة مغلقة',
+    'لا توجد محاضرة رغم جدولتها',
+    'محاضرة قائمة غير مسجَّلة بالجدول',
+    'القاعة غير مهيأة (تكييف/إضاءة/مقاعد)',
+    'خلل في التجهيزات التقنية'
+  ];
 
-  els.buildingSelect.addEventListener('change', ()=>{
-    const idx = els.buildingSelect.value;
-    if(idx===''){ return; }
-    const b = BUILDINGS_DATA[Number(idx)];
-    els.collegeSelect.value = b.college || '';
-  });
+  var DAY_NAMES = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-  els.collegeSelect.addEventListener('change', ()=>{
-    const college = els.collegeSelect.value;
-    if(!college){ return; }
-    const idx = BUILDINGS_DATA.findIndex(b=> b.college === college);
-    if(idx !== -1){ els.buildingSelect.value = String(idx); }
-  });
+  /* ═════════ حالة ═════════ */
 
-  // ---------- تحديد الموقع تلقائياً ----------
-  function haversineMeters(lat1,lng1,lat2,lng2){
-    const R=6371000;
-    const p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
-    const dp=(lat2-lat1)*Math.PI/180, dl=(lng2-lng1)*Math.PI/180;
-    const a=Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-    return 2*R*Math.asin(Math.sqrt(a));
-  }
-  function findNearestBuilding(lat,lng){
-    let best=null, bestIdx=-1;
-    BUILDINGS_DATA.forEach((b,i)=>{
-      const d = haversineMeters(lat,lng,b.lat,b.lng);
-      if(!best || d<best.distance){ best={...b, distance:d}; bestIdx=i; }
-    });
-    return best ? {...best, index:bestIdx} : null;
-  }
-  function geoErrorMessage(err){
-    if(!err) return 'خطأ غير معروف.';
-    switch(err.code){
-      case 1: return 'تم رفض إذن الوصول للموقع.';
-      case 2: return 'تعذّر تحديد الموقع (إشارة GPS غير متاحة).';
-      case 3: return 'انتهت مهلة تحديد الموقع.';
-      default: return err.message || 'خطأ غير معروف.';
+  var SCHED = null;          // ملف الجدول
+  var room  = null;          // { key, label, code, building, campus, type, raw }
+  var lecture = null;        // المحاضرة المطابِقة
+  var allMatches = [];
+  var scanner = null, scanning = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function setV(id, val) {
+    var el = $(id);
+    if (val === null || val === undefined || val === '') {
+      el.textContent = '—'; el.className = 'v empty';
+    } else {
+      el.textContent = val; el.className = 'v';
     }
   }
-  function showManualFallback(msg){
-    els.locationIcon.textContent = '⚠️';
-    els.locationStatus.textContent = msg;
-    els.locationRetryBtn.classList.remove('hidden');
+
+  function msg(id, text, kind) {
+    var el = $(id);
+    if (!text) { el.className = 'note-bar'; el.textContent = ''; return; }
+    el.className = 'note-bar on ' + (kind || 'info');
+    el.textContent = text;
   }
-  function requestLocation(){
-    els.locationIcon.textContent = '📍';
-    els.locationRetryBtn.classList.add('hidden');
-    if(!navigator.geolocation){
-      showManualFallback('المتصفح لا يدعم تحديد الموقع تلقائياً. اختر الكلية والمبنى يدوياً.');
-      return;
+
+  /* ═════════ الزمن ═════════ */
+
+  function nowKSA() {
+    // تثبيت المنطقة الزمنية على توقيت السعودية مهما كان ضبط الجهاز
+    var s = new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' });
+    return new Date(s);
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function toMin(hhmm) {
+    var p = hhmm.split(':');
+    return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+  }
+
+  function currentPeriod(d, grid) {
+    var m = d.getHours() * 60 + d.getMinutes();
+    for (var i = 1; i < grid.length; i++) {
+      if (!grid[i]) continue;
+      if (m >= toMin(grid[i][0]) - GRACE_MIN &&
+          m <= toMin(grid[i][1]) + GRACE_MIN) return i;
     }
-    els.locationStatus.textContent = 'جارٍ تحديد موقعك...';
-    navigator.geolocation.getCurrentPosition(
-      pos=>{
-        const { latitude, longitude } = pos.coords;
-        const match = findNearestBuilding(latitude, longitude);
-        if(match && match.distance <= MAX_MATCH_DISTANCE_M){
-          els.buildingSelect.value = String(match.index);
-          els.collegeSelect.value = match.college || '';
-          els.locationIcon.textContent = '✅';
-          els.locationStatus.textContent = `تم تحديد الموقع: ${match.building} (على بُعد ${Math.round(match.distance)} م تقريباً).`;
-        }else if(match){
-          showManualFallback(`أقرب مبنى معروف "${match.building}" يبعد ${Math.round(match.distance)} م — بعيد جداً للتأكيد التلقائي. اختر المبنى يدوياً.`);
-        }else{
-          showManualFallback('تعذّر إيجاد مبنى قريب معروف بقاعدة البيانات الحالية. اختر الكلية والمبنى يدوياً.');
-        }
-      },
-      err=>{ showManualFallback('تعذّر الوصول لموقعك: ' + geoErrorMessage(err) + ' اختر الكلية والمبنى يدوياً.'); },
-      { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
-    );
-  }
-  els.locationRetryBtn.addEventListener('click', requestLocation);
-  requestLocation();
-
-  // ---------- مسح اللوحة الذكية للقاعة (باركود) ----------
-  let qrScannerInstance = null;
-  let currentLectureRaw = '';
-
-  function extractRoomIdFromUrl(scannedText){
-    // يقبل الرابط كاملاً (مثل https://uqu.edu.sa/App/BuildingsRoom/2830) أو رقماً مجرداً
-    const match = String(scannedText||'').match(/BuildingsRoom\/(\d+)/i);
-    if(match) return match[1];
-    if(/^\d+$/.test(String(scannedText||'').trim())) return scannedText.trim();
     return null;
   }
 
-  function findBuildingIndexByText(buildingCollegeText){
-    if(!buildingCollegeText) return -1;
-    let idx = BUILDINGS_DATA.findIndex(b => b.building === buildingCollegeText);
-    if(idx !== -1) return idx;
-    // مطابقة تقريبية احتياطية لو اختلف التنسيق قليلاً
-    const normalized = buildingCollegeText.replace(/\s+/g,'');
-    idx = BUILDINGS_DATA.findIndex(b => b.building.replace(/\s+/g,'') === normalized);
-    return idx;
+  function refreshClock() {
+    var d = nowKSA();
+    var dow = d.getDay();
+    var p = currentPeriod(d, gridFor(room && room.campus));
+    setV('fDay', DAY_NAMES[dow]);
+    setV('fDate', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
+    setV('fTime', pad(d.getHours()) + ':' + pad(d.getMinutes()));
+    setV('fPeriod', p ? ('الفترة ' + p) : (room ? 'بريك / خارج الفترات' : '—'));
+    return { date: d, dow: dow, period: p };
   }
 
-  async function fetchRoomScanData(roomId){
-    const controller = new AbortController();
-    const timeoutId = setTimeout(()=> controller.abort(), 20000);
-    try{
-      const response = await fetch(`${ROOM_SCAN_API}?roomId=${encodeURIComponent(roomId)}`, {
-        method:'GET', signal: controller.signal,
-      });
-      let data;
-      try{ data = await response.json(); }
-      catch{ throw new Error('أعاد خادم المسح استجابة غير صالحة.'); }
-      if(!response.ok || !data.success){ throw new Error(data.error || 'تعذّر جلب بيانات القاعة.'); }
-      return data;
-    }catch(error){
-      if(error && error.name==='AbortError') throw new Error('انتهت مهلة الاتصال بخادم المسح.');
-      throw error;
-    }finally{
-      clearTimeout(timeoutId);
-    }
+  /* ═════════ توحيد مفتاح القاعة (مطابق لمنطق بناء الملف) ═════════ */
+
+  function normRoom(s) {
+    if (!s) return null;
+    s = String(s).trim();
+    if (!s) return null;
+    s = s.replace(/[٠-٩]/g, function (c) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(c); });
+    s = s.replace(/\u0640/g, '');
+    s = s.replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي');
+    s = s.replace(/\s+/g, ' ').trim();
+    return s.toUpperCase();
   }
 
-  async function stopQrScanner(){
-    const scanner = qrScannerInstance;
-    qrScannerInstance = null;
-    if(!scanner) return;
-    try{
-      await scanner.stop();
-    }catch(e){
-      // قد لا يكون الماسح قد بدأ بالكامل؛ نتجاهل خطأ الإيقاف في هذه الحالة.
-    }
-    try{ scanner.clear(); }catch(e){}
+  // رمز القاعة الموحَّد: مبنى-دور.رقم  مثل 23-0.015
+  var ROOM_CODE_RE = /\b(\d{1,2})\s*-\s*(\d)\.(\d{2,3})\b/;
+
+  function extractRoomCode(text) {
+    if (!text) return null;
+    var m = String(text).match(ROOM_CODE_RE);
+    return m ? (m[1] + '-' + m[2] + '.' + m[3]) : null;
   }
 
-  function closeScanModal(){
-    stopQrScanner();
-    els.scanModal.classList.add('hidden');
-    document.body.style.overflow = '';
+  /* ═════════ تحميل الجدول ═════════ */
+
+  function loadSchedule() {
+    return fetch(SCHEDULE_URL, { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (j) { SCHED = j; return j; });
   }
 
-  function cameraErrorText(err){
-    const name = err && err.name ? err.name : '';
-    const msg = err && err.message ? err.message : String(err || 'خطأ غير معروف');
-    if(name === 'NotAllowedError' || /permission|denied|notallowed/i.test(msg)){
-      return 'تم رفض إذن الكاميرا. من سفاري اضغط زر aA بجوار العنوان، ثم إعدادات الموقع، ثم الكاميرا: سماح.';
-    }
-    if(name === 'NotFoundError' || /not.?found|no camera/i.test(msg)){
-      return 'لم يعثر المتصفح على كاميرا متاحة.';
-    }
-    if(name === 'NotReadableError' || /not.?readable|could not start/i.test(msg)){
-      return 'الكاميرا مستخدمة من تطبيق آخر أو تعذّر تشغيلها. أغلق تطبيقات الكاميرا ثم أعد تحميل الصفحة.';
-    }
-    if(name === 'OverconstrainedError'){
-      return 'تعذّر اختيار الكاميرا الخلفية بهذه الإعدادات.';
-    }
-    return msg;
-  }
+  /* ═════════ البحث عن المحاضرة ═════════ */
 
-  function scannerConfig(){
-    const side = Math.max(190, Math.min(260, window.innerWidth - 64));
-    return { fps: 8, qrbox: { width: side, height: side } };
-  }
+  function findLecture(roomKey) {
+    allMatches = [];
+    lecture = null;
+    var t = refreshClock();
 
-  async function startScannerWithFallback(onSuccess, onFrameError){
-    const config = scannerConfig();
-    qrScannerInstance = new Html5Qrcode('scanVideo');
-    try{
-      // الخيار الأبسط والأكثر توافقاً مع سفاري الحديث.
-      await qrScannerInstance.start(
-        { facingMode: 'environment' }, config, onSuccess, onFrameError
-      );
-      return;
-    }catch(firstError){
-      const firstText = cameraErrorText(firstError);
-      // لا نكرر طلب الإذن إذا رفضه المستخدم صراحةً.
-      if(/رفض إذن|Permission|denied/i.test(firstText)) throw firstError;
-      await stopQrScanner();
+    if (!SCHED) { msg('lecMsg', 'لم يُحمَّل الجدول الدراسي بعد.', 'warn'); return; }
 
-      // مسار احتياطي لأجهزة iPhone التي لا تحسم facingMode بصورة صحيحة.
-      const cameras = await Html5Qrcode.getCameras();
-      if(!cameras || !cameras.length) throw firstError;
-      const rearPattern = /back|rear|environment|خلف/i;
-      const preferred = cameras.find(c => rearPattern.test(c.label || '')) || cameras[cameras.length - 1];
-      qrScannerInstance = new Html5Qrcode('scanVideo');
-      await qrScannerInstance.start(preferred.id, config, onSuccess, onFrameError);
+    var entries = SCHED.index[roomKey];
+    if (!entries) {
+      msg('lecMsg', 'القاعة غير مدرجة في الجدول الدراسي لهذا الفصل.', 'warn');
+      clearLecture(); return;
     }
-  }
-
-  async function openScanModal(){
-    els.scanStatus.textContent = '';
-
-    if(!ROOM_SCAN_API || ROOM_SCAN_API === 'ضع_هنا_رابط_Cloudflare_Worker'){
-      els.scanStatus.textContent = '⚠️ لم يُضبط رابط خدمة مسح اللوحات بعد داخل الصفحة (ROOM_SCAN_API).';
-      return;
+    if (t.dow > 4) {
+      msg('lecMsg', 'اليوم ' + DAY_NAMES[t.dow] + ' — لا دراسة.', 'info');
+      clearLecture(); return;
     }
-    if(!window.isSecureContext){
-      els.scanStatus.textContent = '⚠️ الكاميرا لا تعمل إلا من رابط HTTPS آمن. لا تفتح الملف مباشرة من تطبيق الملفات أو عبر file://.';
-      return;
-    }
-    if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function'){
-      els.scanStatus.textContent = '⚠️ هذا السياق لا يتيح الكاميرا. افتح الرابط مباشرة داخل Safari، وليس داخل معاينة واتساب/البريد أو متصفح مضمّن.';
-      return;
-    }
-    if(typeof Html5Qrcode === 'undefined'){
-      els.scanStatus.textContent = '⚠️ تعذّر تحميل مكتبة المسح من الإنترنت. تحقق من الشبكة ثم أعد تحميل الصفحة.';
-      return;
+    if (!t.period) {
+      msg('lecMsg', 'الوقت الحالي بريك أو خارج فترات اليوم الدراسي.', 'info');
+      clearLecture(); return;
     }
 
-    await stopQrScanner();
-    els.scanVideo.innerHTML = '';
-    els.scanModal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    els.scanModalFooter.textContent = 'جارٍ طلب إذن الكاميرا... اضغط «سماح» عند ظهور الرسالة.';
+    // ★ المطابقة المحايدة: هل رقم الفترة الجارية ضمن فترات الصف؟
+    // تعمل مع الثنائي والثلاثي والرباعي وأي تجميع آخر.
+    // ورقم الفترة يُحسب بشبكة الشطر الذي يخصّ الصفّ نفسه (بريك الطلاب يزحزح ترقيمهم).
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (e.d !== t.dow) continue;
+      var ep = currentPeriod(t.date, gridFor(e.cmp));
+      if (ep && e.p.indexOf(ep) !== -1) allMatches.push(e);
+    }
 
-    let scanCompleted = false;
-    const safetyTimeout = setTimeout(()=>{
-      if(scanCompleted || els.scanModal.classList.contains('hidden')) return;
-      els.scanModalFooter.textContent = '⚠️ لم تستجب الكاميرا. تحقق من إذن الكاميرا للموقع في Safari ثم أعد تحميل الصفحة.';
-    }, 15000);
+    if (!allMatches.length) {
+      msg('lecMsg', 'لا توجد محاضرة مجدولة في هذه القاعة الآن (الفترة ' + t.period + ').', 'info');
+      clearLecture(); return;
+    }
 
-    try{
-      await startScannerWithFallback(
-        (decodedText)=>{
-          if(scanCompleted) return;
-          scanCompleted = true;
-          clearTimeout(safetyTimeout);
-          handleScanResult(decodedText);
-        },
-        ()=>{ /* عدم وجود رمز في الإطار الحالي أمر طبيعي. */ }
-      );
-      if(!scanCompleted){
-        clearTimeout(safetyTimeout);
-        els.scanModalFooter.textContent = 'الكاميرا تعمل — وجّهها نحو رمز QR في منتصف الشاشة.';
-      }
-    }catch(err){
-      clearTimeout(safetyTimeout);
-      console.warn('تعذّر تشغيل الكاميرا:', err);
-      els.scanModalFooter.textContent = '⚠️ ' + cameraErrorText(err);
+    lecture = allMatches[0];
+    msg('lecMsg', '', null);
+    showLecture(lecture);
+
+    if (allMatches.length > 1) {
+      $('fMulti').className = 'multi on';
+      $('fMulti').textContent = 'تنبيه: ' + allMatches.length + ' محاضرات مسجَّلة على القاعة في الفترة نفسها (تعارض جدولة). المعروض أولها.';
+    } else {
+      $('fMulti').className = 'multi';
     }
   }
 
-  async function handleScanResult(scannedText){
-    const roomId = extractRoomIdFromUrl(scannedText);
-    closeScanModal();
-    if(!roomId){
-      els.scanStatus.textContent = '⚠️ الباركود الممسوح مو بصيغة معروفة. جرّب مرة أخرى أو تأكد من نوع اللوحة.';
-      return;
-    }
-    els.scanStatus.textContent = 'جارٍ جلب بيانات القاعة...';
-    try{
-      const data = await fetchRoomScanData(roomId);
-      if(data.room){ els.roomInfo.value = data.room; }
-      if(data.buildingCollege){ els.buildingRawInfo.value = data.buildingCollege; }
-      const buildingIdx = findBuildingIndexByText(data.buildingCollege);
-      if(buildingIdx !== -1){
-        els.buildingSelect.value = String(buildingIdx);
-        els.collegeSelect.value = BUILDINGS_DATA[buildingIdx].college || '';
-        els.scanStatus.textContent = '✅ تم التعرّف على القاعة والمبنى تلقائياً من اللوحة الذكية.';
-      }else{
-        els.scanStatus.textContent = '⚠️ تم قراءة القاعة، لكن ما تطابق المبنى تلقائياً. النص محفوظ بخانة "معلومات المبنى" أدناه — اختر المبنى يدوياً من القائمة.';
-      }
-      currentLectureRaw = data.currentLecture || '';
-      if(currentLectureRaw){
-        els.currentLectureText.textContent = currentLectureRaw;
-        els.currentLecturePreview.classList.remove('hidden');
-      }else{
-        els.currentLecturePreview.classList.add('hidden');
-      }
-    }catch(err){
-      console.warn('تعذّر جلب بيانات القاعة:', err);
-      els.scanStatus.textContent = '⚠️ تعذّر جلب بيانات القاعة (' + (err.message||'خطأ غير معروف') + '). تقدر تعبّي البيانات يدوياً.';
-    }
+  function showLecture(e) {
+    setV('fCourse', e.cr); setV('fCode', e.cd); setV('fSec', e.sec);
+    setV('fTeacher', e.tea); setV('fAct', e.act); setV('fStu', e.stu);
+    setV('fDept', e.dep); setV('fCol', e.col);
+    setV('fSlots', e.p.join('، '));
   }
 
-  els.scanPlaqueBtn.addEventListener('click', openScanModal);
-  els.scanCloseBtn.addEventListener('click', closeScanModal);
-
-  // ---------- التسليم ----------
-  function buildReportText(){
-    const building = els.buildingSelect.value ? BUILDINGS_DATA[Number(els.buildingSelect.value)].building : '(غير محدَّد)';
-    const checked = Array.from(els.checkList.querySelectorAll('input:checked')).map(c=>c.value);
-    return [
-      'تقرير رصد ميداني',
-      'التاريخ والوقت: ' + (els.datetimeInput.value || ''),
-      'المبنى: ' + building,
-      'الكلية: ' + (els.collegeSelect.value || '—'),
-      'معلومات القاعة: ' + (els.roomInfo.value.trim() || '—'),
-      'معلومات المبنى (خام): ' + (els.buildingRawInfo.value.trim() || '—'),
-      'معلومات المحاضرة حالياً: ' + (currentLectureRaw || '—'),
-      'رمز/اسم الوكيل: ' + (els.agentCode.value.trim() || '—'),
-      'الملاحظات المرصودة: ' + (checked.length ? checked.join('، ') : '—'),
-      'ملاحظات إضافية: ' + (els.notesInput.value.trim() || '—'),
-    ].join('\n');
+  function clearLecture() {
+    ['fCourse','fCode','fSec','fTeacher','fAct','fStu','fDept','fCol','fSlots']
+      .forEach(function (id) { setV(id, null); });
+    $('fMulti').className = 'multi';
   }
 
-  async function submitToSheet(payload){
-    const controller = new AbortController();
-    const timeoutId = setTimeout(()=> controller.abort(), 20000);
-    try{
-      const response = await fetch(SHEET_SUBMIT_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      let data;
-      try{ data = await response.json(); }
-      catch{ throw new Error('أعاد الخادم استجابة غير صالحة.'); }
-      if(!response.ok || !data.success){ throw new Error(data.error || 'تعذّر إرسال التقرير.'); }
-      return data;
-    }catch(error){
-      if(error && error.name==='AbortError') throw new Error('انتهت مهلة الاتصال بالخادم.');
-      throw error;
-    }finally{
-      clearTimeout(timeoutId);
-    }
-  }
+  /* ═════════ تثبيت القاعة ═════════ */
 
-  els.submitBtn.addEventListener('click', async ()=>{
-    const buildingIdx = els.buildingSelect.value;
-    const checked = Array.from(els.checkList.querySelectorAll('input:checked')).map(c=>c.value);
-    const notes = els.notesInput.value.trim();
-
-    if(!buildingIdx){
-      alert('اختر المبنى أولاً.');
-      els.buildingSelect.focus();
-      return;
-    }
-    if(checked.length===0 && !notes){
-      alert('حدّد ملاحظة واحدة على الأقل، أو اكتب ملاحظة إضافية.');
-      return;
-    }
-    if(!SHEET_SUBMIT_API || SHEET_SUBMIT_API === 'ضع_هنا_رابط_Google_Apps_Script'){
-      els.submitErrorMsg.textContent = 'لم يُضبط رابط استقبال البيانات بعد داخل الصفحة (SHEET_SUBMIT_API).';
-      els.submitError.classList.remove('hidden');
-      return;
-    }
-
-    const b = BUILDINGS_DATA[Number(buildingIdx)];
-    const payload = {
-      datetime: els.datetimeInput.value || '',
-      college: els.collegeSelect.value || '',
-      building: b.building,
-      campus: b.campus,
-      buildingNumber: b.buildingNumber || '',
-      agentCode: els.agentCode.value.trim(),
-      roomInfo: els.roomInfo.value.trim(),
-      buildingRawInfo: els.buildingRawInfo.value.trim(),
-      currentLecture: currentLectureRaw,
-      observations: checked.join('، '),
-      notes: notes,
+  function applyRoom(info) {
+    var key = normRoom(info.code || info.label);
+    room = {
+      key: key,
+      label: info.label || info.code || key,
+      code: info.code || null,
+      building: info.building || null,
+      campus: info.campus || null,
+      type: info.type || null,
+      source: info.source || 'باركود'
     };
 
-    els.submitBtn.disabled = true;
-    const originalLabel = els.submitBtn.textContent;
-    els.submitBtn.textContent = 'جارٍ الإرسال...';
-    els.submitError.classList.add('hidden');
-    try{
-      await submitToSheet(payload);
-      els.formView.classList.add('hidden');
-      els.thankYouScreen.classList.remove('hidden');
-    }catch(err){
-      console.warn('تعذّر إرسال التقرير:', err);
-      els.submitErrorMsg.textContent = 'تعذّر إرسال التقرير (' + (err.message||'خطأ غير معروف') + '). يمكنك نسخ التقرير كنص والتواصل به احتياطياً.';
-      els.submitError.classList.remove('hidden');
-    }finally{
-      els.submitBtn.disabled = false;
-      els.submitBtn.textContent = originalLabel;
+    // إثراء من الجدول: المقر مأخوذ من بيانات الجامعة نفسها
+    if (SCHED && SCHED.rooms[key]) {
+      var m = SCHED.rooms[key];
+      room.campus = room.campus || m.cmp;
+      room.code = room.code || m.code;
+      room.label = m.label || room.label;
     }
-  });
-
-  els.copyReportBtn.addEventListener('click', async ()=>{
-    const text = buildReportText();
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        await navigator.clipboard.writeText(text);
-      }else{
-        const ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-      }
-      els.copyReportBtn.textContent = '✅ تم النسخ';
-      setTimeout(()=> els.copyReportBtn.textContent='📋 نسخ التقرير كنص احتياطي', 1500);
-    }catch(err){
-      alert('تعذّر النسخ التلقائي. النص:\n\n' + text);
+    // رقم المبنى من بادئة الرمز الموحَّد
+    if (!room.building) {
+      var mm = (room.code || room.label || '').match(/^(\d{1,2})-/);
+      if (mm) room.building = 'مبنى ' + mm[1];
     }
+
+    setV('fRoom', room.label);
+    setV('fBuilding', room.building);
+    setV('fCampus', room.campus);
+    setV('fRoomType', room.type);
+
+    findLecture(key);
+    $('btnSend').disabled = false;
+  }
+
+  /* ═════════ الماسح ═════════ */
+
+  function stopScanner() {
+    if (scanner && scanning) {
+      scanner.stop().then(function () {
+        scanner.clear();
+        $('reader').className = '';
+        scanning = false;
+        $('btnScan').textContent = 'مسح باركود اللوحة';
+      }).catch(function () { scanning = false; });
+    }
+  }
+
+  function onScan(text) {
+    stopScanner();
+    msg('scanMsg', 'تمت القراءة… جارٍ تحديد القاعة.', 'info');
+
+    var code = extractRoomCode(text);
+    if (code) {                       // الباركود يحمل الرمز مباشرة
+      msg('scanMsg', 'تم تحديد القاعة من الباركود.', 'ok');
+      applyRoom({ code: code, label: code, source: 'باركود' });
+      return;
+    }
+
+    // وإلا: رابط صفحة القاعة -> Worker وسيط لقراءتها
+    fetch(ROOMSCAN_URL + '?url=' + encodeURIComponent(text))
+      .then(function (r) { return r.text(); })
+      .then(function (body) {
+        var data = null;
+        try { data = JSON.parse(body); } catch (e) { data = null; }
+        var flat = data ? JSON.stringify(data) : body;
+        var c = extractRoomCode((data && (data.room || data.code || data.name)) || flat);
+        if (!c) {
+          msg('scanMsg', 'تعذّر استخراج رمز القاعة من اللوحة. أعد المسح.', 'warn');
+          return;
+        }
+        msg('scanMsg', 'تم تحديد القاعة.', 'ok');
+        applyRoom({
+          code: c,
+          label: c,
+          building: data && (data.building || data.buildingName) || null,
+          campus: data && (data.campus || data.site) || null,
+          type: data && (data.type || data.roomType) || null,
+          source: 'باركود'
+        });
+      })
+      .catch(function () {
+        msg('scanMsg', 'تعذّر الاتصال بخدمة قراءة اللوحة. أعد المسح.', 'warn');
+      });
+  }
+
+  $('btnScan').addEventListener('click', function () {
+    if (scanning) { stopScanner(); return; }
+    if (typeof Html5Qrcode === 'undefined') {
+      msg('scanMsg', 'لم تُحمَّل مكتبة المسح. تحقق من الاتصال ثم أعد فتح الصفحة.', 'warn');
+      return;
+    }
+    msg('scanMsg', 'جارٍ فتح الكاميرا… اسمح بالإذن عند طلبه.', 'info');
+    $('reader').className = 'on';
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 230, height: 230 } },
+      function (decoded) { onScan(decoded); },
+      function () {}
+    ).then(function () {
+      scanning = true;
+      $('btnScan').textContent = 'إيقاف المسح';
+      msg('scanMsg', 'وجّه الكاميرا نحو الباركود على لوحة القاعة.', 'info');
+    }).catch(function (err) {
+      $('reader').className = '';
+      msg('scanMsg', 'تعذّر تشغيل الكاميرا: ' + err, 'warn');
+    });
   });
 
-  els.newReportBtn.addEventListener('click', ()=>{
-    els.thankYouScreen.classList.add('hidden');
-    els.formView.classList.remove('hidden');
-    els.buildingSelect.value = '';
-    els.collegeSelect.value = '';
-    els.agentCode.value = '';
-    els.roomInfo.value = '';
-    els.buildingRawInfo.value = '';
-    currentLectureRaw = '';
-    els.currentLecturePreview.classList.add('hidden');
-    els.scanStatus.textContent = '';
-    els.notesInput.value = '';
-    els.checkList.querySelectorAll('input:checked').forEach(c=> c.checked=false);
-    els.datetimeInput.value = nowLocalDatetime();
-    els.submitError.classList.add('hidden');
-    requestLocation();
+  /* ═════════ الملاحظات ═════════ */
+
+  NOTE_OPTIONS.forEach(function (txt, i) {
+    var lab = document.createElement('label');
+    lab.className = 'chk';
+    lab.innerHTML = '<input type="checkbox" value="' + txt + '" data-i="' + i + '"><span>' + txt + '</span>';
+    lab.querySelector('input').addEventListener('change', function () {
+      lab.className = this.checked ? 'chk sel' : 'chk';
+    });
+    $('notesBox').appendChild(lab);
   });
 
-})();
+  function selectedNotes() {
+    var out = [];
+    $('notesBox').querySelectorAll('input:checked').forEach(function (c) { out.push(c.value); });
+    return out;
+  }
+
+  /* ═════════ الإرسال ═════════ */
+
+  $('btnSend').addEventListener('click', function () {
+    if (!room) { msg('scanMsg', 'حدِّد القاعة أولاً.', 'warn'); return; }
+    var t = refreshClock();
+    var btn = $('btnSend');
+    btn.disabled = true; btn.textContent = 'جارٍ الإرسال…';
+
+    var payload = {
+      // الزمن
+      'التاريخ': $('fDate').textContent,
+      'اليوم': DAY_NAMES[t.dow],
+      'الوقت': $('fTime').textContent,
+      'الطابع_الزمني': nowKSA().toISOString(),
+      'الفترة': t.period || '',
+      // القاعة (من الباركود)
+      'رقم_القاعة': room.label || '',
+      'رمز_القاعة': room.code || '',
+      'المبنى': room.building || '',
+      'المقر': room.campus || '',
+      'نوع_القاعة': room.type || '',
+      'مصدر_التحديد': room.source || '',
+      // المحاضرة (من الجدول)
+      'المقرر': lecture ? (lecture.cr || '') : '',
+      'كود_المقرر': lecture ? (lecture.cd || '') : '',
+      'الشعبة': lecture ? (lecture.sec || '') : '',
+      'النشاط': lecture ? (lecture.act || '') : '',
+      'المحاضر': lecture ? (lecture.tea || '') : '',
+      'القسم': lecture ? (lecture.dep || '') : '',
+      'الكلية': lecture ? (lecture.col || '') : '',
+      'عدد_الطلبة': lecture ? (lecture.stu || '') : '',
+      'فترات_المحاضرة': lecture ? lecture.p.join('، ') : '',
+      'حالة_الجدولة': lecture ? 'مجدولة' : 'غير مجدولة',
+      'تعارض_جدولة': allMatches.length > 1 ? allMatches.length : '',
+      // الرصد
+      'الملاحظات': selectedNotes().join(' | '),
+      'ملاحظات_حرة': $('freeNote').value.trim()
+    };
+
+    fetch(SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.text().then(function (tx) { return { ok: r.ok, tx: tx }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.tx || 'فشل الإرسال');
+        msg('scanMsg', 'تم تسجيل الرصد بنجاح.', 'ok');
+        btn.textContent = 'تم الإرسال ✓';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(function () { location.reload(); }, 2200);
+      })
+      .catch(function (err) {
+        msg('scanMsg', 'تعذّر الإرسال: ' + err.message + ' — أعد المحاولة.', 'warn');
+        btn.disabled = false; btn.textContent = 'إرسال';
+      });
+  });
+
+  /* ═════════ الإقلاع ═════════ */
+
+  refreshClock();
+  setInterval(function () {
+    refreshClock();
+    if (room) findLecture(room.key);   // تحديث المحاضرة مع تغيّر الفترة
+  }, 60000);
+
+  loadSchedule().then(function (j) {
+    msg('scanMsg', 'جاهز — ' + (j.term || 'الجدول') + ' · ' + Object.keys(j.index).length + ' قاعة.', 'ok');
+  }).catch(function (e) {
+    msg('scanMsg', 'تعذّر تحميل الجدول الدراسي (' + e.message + '). سيعمل النموذج دون بيانات المحاضرة.', 'warn');
+  });
+
 });
 </script>
-<div id="scanModal" class="hidden">
-  <div id="scanModalHeader">
-    <span>وجّه الكاميرا نحو الباركود باللوحة</span>
-    <button type="button" id="scanCloseBtn">✕</button>
-  </div>
-  <div id="scanVideoWrap">
-    <div id="scanVideo"></div>
-  </div>
-  <div id="scanModalFooter">جارٍ البدء...</div>
-</div>
-
 </body>
 </html>
