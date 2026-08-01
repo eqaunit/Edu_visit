@@ -57,6 +57,7 @@
   .map-strip{display:flex;flex-wrap:wrap;gap:3px;margin-top:10px;max-height:32px;overflow:hidden;}
   .map-tile{width:9px;height:9px;border-radius:2px;background:var(--gray-200);cursor:pointer;flex-shrink:0;}
   .map-tile.done{background:var(--light-green);}
+  .map-tile.done.issue{background:var(--red);}
   .visit-info{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .visit-info .vchip{background:var(--gray-100);color:var(--txt-body);border:1px solid var(--border-clr);
     font-size:13.5px;padding:5px 12px;border-radius:7px;}
@@ -77,6 +78,7 @@
     cursor:pointer;transition:transform .12s;}
   .room-card:active{transform:scale(.98);}
   .room-card.visited{border-color:var(--green-ok);background:var(--green-ok-bg);}
+  .room-card.visited.has-issue{border-color:var(--red);background:var(--red-soft);}
   .room-card.flash{outline:2px solid var(--gold-700);}
   .card-top{display:flex;align-items:center;justify-content:space-between;}
   .room-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -135,21 +137,24 @@
     margin-bottom:10px;color:var(--txt-dark);}
   .photo-count-badge{background:var(--green-ok-bg);color:var(--green-ok);font-size:12.5px;font-weight:700;
     padding:3px 10px;border-radius:20px;}
-  #photoDocBtn{width:100%;background:var(--dark-green);color:#fff;font-weight:700;font-size:16px;
+  #photoDocBtn{width:100%;background:#C2410C;color:#fff;font-weight:700;font-size:16px;
     padding:13px;border:none;border-radius:10px;cursor:pointer;}
   #photoPreviewWrap{margin-top:12px;border-radius:12px;overflow:hidden;background:#111827;}
   #photoCanvas{display:block;width:100%;height:auto;}
   #photoStatus{min-height:20px;margin-top:10px;font-size:13.5px;color:var(--txt-muted);text-align:center;}
   .photo-capture-actions{display:flex;gap:8px;margin-top:10px;}
-  .photo-capture-actions button{flex:1;padding:12px;border-radius:9px;border:none;font-weight:700;
-    font-size:14.5px;cursor:pointer;}
+  .photo-capture-actions button{flex:1;padding:12px 6px;border-radius:9px;border:none;font-weight:700;
+    font-size:13.5px;cursor:pointer;white-space:nowrap;}
   #photoSendBtn{background:var(--gold-700);color:#fff;}
   #photoSendBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
   #photoRetakeBtn{background:var(--gray-100);color:var(--txt-body);}
+  #photoCancelBtn{background:var(--gray-100);color:var(--red);}
 
   .modal-actions{display:flex;gap:8px;margin-top:18px;}
   .modal-actions button{flex:1;padding:14px;border-radius:10px;border:none;font-weight:700;font-size:16.5px;cursor:pointer;}
   #cancelBtn{background:var(--gray-100);color:var(--txt-body);}
+  #photoDocBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
+  #photoDocBtn.required{box-shadow:0 0 0 3px rgba(194,65,12,.18);}
   #saveBtn{background:var(--light-green);color:#fff;}
   #saveBtn:disabled{background:var(--gray-200);color:var(--gray-500);cursor:not-allowed;}
   #clearBtn{display:block;width:100%;text-align:center;background:none;border:none;color:var(--red);
@@ -266,7 +271,7 @@
     </div>
 
     <div class="photo-group">
-      <div class="photo-group-label">📷 توثيق بالصور (اختياري) <span id="photoCountLabel" class="photo-count-badge hidden"></span></div>
+      <div class="photo-group-label">📷 توثيق بالصور <span id="photoCountLabel" class="photo-count-badge hidden"></span></div>
       <input type="file" id="photoCameraInput" accept="image/*" capture="environment" class="hidden">
       <button type="button" id="photoDocBtn">وثّق</button>
       <div id="photoPreviewWrap" class="hidden"><canvas id="photoCanvas"></canvas></div>
@@ -274,6 +279,7 @@
       <div id="photoCaptureActions" class="photo-capture-actions hidden">
         <button type="button" id="photoSendBtn">📤 إرسال</button>
         <button type="button" id="photoRetakeBtn">🔄 إعادة التصوير</button>
+        <button type="button" id="photoCancelBtn">✕ إلغاء</button>
       </div>
     </div>
 
@@ -525,7 +531,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     el.innerHTML='';
     dataRows.forEach((r,idx)=>{
       const tile=document.createElement('div');
-      tile.className = 'map-tile' + (r.visited?' done':'');
+      tile.className = 'map-tile' + (r.visited?' done':'') + (r.visited && hasIssue(r)?' issue':'');
       tile.title = `${r.room} — ${r.course}`;
       tile.addEventListener('click', ()=>{
         const card = document.querySelector(`.room-card[data-idx="${idx}"]`);
@@ -539,6 +545,11 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     });
   }
 
+  /** ملاحظة على المحاضرة = غياب عضو أو غياب طلاب. */
+  function hasIssue(r){
+    return !!(r && r.entry && (r.entry.member==='لا' || r.entry.student==='لا'));
+  }
+
   function renderList(){
     const list = document.getElementById('cardsList');
     list.innerHTML='';
@@ -550,7 +561,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       if(q && !`${r.room} ${r.course} ${r.instructor}`.includes(q)) return;
       shown++;
       const card=document.createElement('div');
-      card.className='room-card' + (r.visited?' visited':'');
+      card.className='room-card' + (r.visited?' visited':'') + (r.visited && hasIssue(r)?' has-issue':'');
       card.dataset.idx = idx;
       card.innerHTML = `
         <div class="card-top">
@@ -592,10 +603,39 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     document.getElementById('entryModal').classList.add('hidden');
     activeRowIndex=null;
   }
+  /**
+   * ضبط حالة زرَّي «وثّق» و«حفظ».
+   *
+   * القاعدة:
+   *  - الخياران «نعم» ← لا حاجة لتوثيق: «وثّق» معطَّل و«حفظ» مفعَّل.
+   *  - أحدهما أو كلاهما «لا» ← يلزم توثيق: «وثّق» مفعَّل، و«حفظ» معطَّل
+   *    حتى تُرفع صورة واحدة على الأقل.
+   *  - أثناء شاشة التصوير (معاينة قائمة) ← «حفظ» معطَّل حتى الإرسال أو الإلغاء.
+   */
   function updateSaveState(){
     if(activeRowIndex==null) return;
-    const r=dataRows[activeRowIndex];
-    document.getElementById('saveBtn').disabled = !(r.entry.member && r.entry.student);
+    const r = dataRows[activeRowIndex];
+
+    const answered  = !!(r.entry.member && r.entry.student);
+    const issue     = hasIssue(r);
+    const photos    = (r.entry && r.entry.photoCount) || 0;
+    const capturing = !document.getElementById('photoCaptureActions').classList.contains('hidden');
+
+    const docBtn  = document.getElementById('photoDocBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // زرّ التوثيق: يُفعَّل فقط عند وجود ملاحظة
+    docBtn.disabled = !issue;
+    docBtn.classList.toggle('required', issue && photos === 0);
+
+    // زرّ الحفظ
+    saveBtn.disabled = !answered || capturing || (issue && photos === 0);
+
+    // تلميح للموظف عن سبب التعطيل
+    const st = document.getElementById('photoStatus');
+    if(issue && photos === 0 && !capturing && !st.textContent){
+      st.textContent = 'يلزم توثيق الملاحظة بصورة قبل الحفظ.';
+    }
   }
 
   document.querySelectorAll('#memberToggle button').forEach(b=>{
@@ -834,6 +874,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     document.getElementById('photoCaptureActions').classList.add('hidden');
     document.getElementById('photoDocBtn').classList.remove('hidden');
     document.getElementById('photoStatus').textContent = '';
+    updateSaveState();
   }
   function updatePhotoCountLabel(){
     if(activeRowIndex==null) return;
@@ -846,6 +887,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
 
   document.getElementById('photoDocBtn').addEventListener('click', ()=> document.getElementById('photoCameraInput').click());
   document.getElementById('photoRetakeBtn').addEventListener('click', ()=> document.getElementById('photoCameraInput').click());
+  document.getElementById('photoCancelBtn').addEventListener('click', ()=> resetPhotoCaptureUI());
 
   document.getElementById('photoCameraInput').addEventListener('change', async ()=>{
     const input = document.getElementById('photoCameraInput');
@@ -880,6 +922,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       document.getElementById('photoPreviewWrap').classList.remove('hidden');
       document.getElementById('photoCaptureActions').classList.remove('hidden');
       document.getElementById('photoDocBtn').classList.add('hidden');
+      updateSaveState();
       document.getElementById('photoStatus').textContent = 'تمت إضافة الوقت والتاريخ. راجع الصورة ثم اضغط إرسال.';
       if(image.close) image.close();
     }catch(err){
@@ -931,6 +974,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       updatePhotoCountLabel();
       resetPhotoCaptureUI();
       document.getElementById('photoStatus').textContent = '✅ تم رفع الصورة بنجاح.';
+      updateSaveState();
     }catch(err){
       console.error('تعذّر رفع الصورة:', err);
       document.getElementById('photoStatus').textContent =
