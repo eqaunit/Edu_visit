@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>رصد ملاحظات المحاضرات — وكالة الجامعة للشؤون الأكاديمية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -12,49 +13,62 @@
   --gold:#B87B02; --gold-light:#F0D878; --gold-bg:#FFF9E8;
   --bg:#F4F7F5; --card:#FFFFFF; --border:#D8E9DD; --border-strong:#A8D5BA;
   --text:#1F2A24; --muted:#6B7C72;
-  --red:#D03A3A; --red-bg:#FEECEC; --ok:#2E8B57; --ok-bg:#E8F5E9;
+  --red-bg:#FEECEC; --ok-bg:#E8F5E9;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);font-family:'Cairo',system-ui,-apple-system,sans-serif;color:var(--text);font-size:15px;padding-bottom:90px}
+body{margin:0;background:var(--bg);font-family:'Cairo',system-ui,-apple-system,sans-serif;
+     color:var(--text);font-size:15px;padding-bottom:96px}
 header{background:linear-gradient(135deg,var(--dark-green),var(--deep-green));color:#fff;padding:18px 16px;text-align:center}
 header h1{margin:0;font-size:18px;font-weight:700}
 header p{margin:4px 0 0;font-size:12px;opacity:.85}
+#simBar{background:var(--gold);color:#fff;padding:9px 14px;text-align:center;font-size:13px;font-weight:700;display:none}
 .wrap{max-width:640px;margin:0 auto;padding:14px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
 .card h2{margin:0 0 12px;font-size:15px;color:var(--dark-green);display:flex;align-items:center;gap:8px}
 .card h2::before{content:'';width:4px;height:16px;background:var(--gold);border-radius:2px}
-.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-family:inherit;
+     font-size:16px;font-weight:700;cursor:pointer}
 .btn-scan{background:var(--dark-green);color:#fff}
 .btn-scan:active{background:var(--light-green)}
 .btn-send{background:var(--gold);color:#fff}
-.btn-send:disabled{background:#C9D3CD;color:#fff}
+.btn-send:disabled{background:#C9D3CD}
 #reader{margin-top:12px;border-radius:12px;overflow:hidden;display:none}
 #reader.on{display:block}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .f{background:#FAFCFB;border:1px solid var(--border);border-radius:10px;padding:9px 11px;min-height:56px}
 .f.full{grid-column:1 / -1}
+.f.key{background:var(--gold-bg);border-color:var(--gold-light)}
 .f label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
 .f .v{font-size:15px;font-weight:600;line-height:1.45;word-break:break-word}
 .f .v.empty{color:#B4C0B9;font-weight:400}
-.f.key{background:var(--gold-bg);border-color:var(--gold-light)}
-.note-bar{padding:11px 13px;border-radius:10px;font-size:13.5px;line-height:1.6;margin-bottom:12px;display:none}
-.note-bar.on{display:block}
-.note-bar.warn{background:var(--red-bg);color:#9B2020;border:1px solid #F3C9C9}
-.note-bar.ok{background:var(--ok-bg);color:#1B5E37;border:1px solid #A8E6CF}
-.note-bar.info{background:#EEF4F1;color:var(--muted);border:1px solid var(--border)}
-.chk{display:flex;align-items:center;gap:11px;padding:12px 11px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none}
+.bar{padding:11px 13px;border-radius:10px;font-size:13.5px;line-height:1.6;margin-bottom:12px;display:none}
+.bar.on{display:block}
+.bar.warn{background:var(--red-bg);color:#9B2020;border:1px solid #F3C9C9}
+.bar.ok{background:var(--ok-bg);color:#1B5E37;border:1px solid #A8E6CF}
+.bar.info{background:#EEF4F1;color:var(--muted);border:1px solid var(--border)}
+.chk{display:flex;align-items:center;gap:11px;padding:12px 11px;border:1.5px solid var(--border);
+     border-radius:10px;margin-bottom:8px;cursor:pointer;user-select:none}
 .chk input{width:21px;height:21px;accent-color:var(--dark-green);flex:none;margin:0}
 .chk.sel{background:var(--gold-bg);border-color:var(--gold)}
 .chk span{font-size:14.5px}
-textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:15px;resize:vertical}
-.sendbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:11px 14px;box-shadow:0 -3px 14px rgba(0,0,0,.07)}
-.sendbar .inner{max-width:640px;margin:0 auto}
-.hidden{display:none !important}
+textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border-strong);
+         border-radius:10px;font-family:inherit;font-size:15px;resize:vertical}
 .multi{font-size:12px;color:var(--gold);margin-top:8px;display:none}
 .multi.on{display:block}
+#diag{display:none;margin-top:10px;padding:10px;background:#F7F9F8;border:1px solid var(--border);border-radius:10px}
+#diag .lbl{font-size:11px;color:var(--muted);margin:0 0 4px}
+#diag .box{font-size:12px;direction:ltr;text-align:left;word-break:break-all;background:#fff;
+           border:1px solid var(--border);border-radius:7px;padding:8px;max-height:150px;overflow:auto;
+           user-select:all;-webkit-user-select:all}
+.sendbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);
+         padding:10px 14px;box-shadow:0 -3px 14px rgba(0,0,0,.07)}
+.sendbar .inner{max-width:640px;margin:0 auto}
+#verTag{text-align:center;font-size:11px;color:var(--muted);padding:2px 0 6px}
 </style>
 </head>
 <body>
+
+<div id="simBar"></div>
 
 <header>
   <h1>رصد ملاحظات المحاضرات</h1>
@@ -67,12 +81,12 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
     <h2>تحديد القاعة</h2>
     <button type="button" class="btn btn-scan" id="btnScan">مسح باركود اللوحة</button>
     <div id="reader"></div>
-    <div class="note-bar" id="scanMsg"></div>
-    <div id="diag" style="display:none;margin-top:10px;padding:10px;background:#F7F9F8;border:1px solid var(--border);border-radius:10px">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">نصّ الباركود المقروء (انسخه وأرسله):</div>
-      <div id="diagScan" style="font-size:12.5px;direction:ltr;text-align:left;word-break:break-all;background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px;user-select:all;-webkit-user-select:all"></div>
-      <div style="font-size:11px;color:var(--muted);margin:8px 0 4px">ردّ خدمة القراءة:</div>
-      <div id="diagResp" style="font-size:11.5px;direction:ltr;text-align:left;word-break:break-all;background:#fff;border:1px solid var(--border);border-radius:7px;padding:8px;max-height:130px;overflow:auto;user-select:all;-webkit-user-select:all"></div>
+    <div class="bar" id="scanMsg"></div>
+    <div id="diag">
+      <p class="lbl">نصّ الباركود المقروء:</p>
+      <div class="box" id="diagScan"></div>
+      <p class="lbl" style="margin-top:8px">ردّ الخادم:</p>
+      <div class="box" id="diagResp"></div>
     </div>
   </div>
 
@@ -84,17 +98,17 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
       <div class="f"><label>المقر</label><div class="v empty" id="fCampus">—</div></div>
       <div class="f"><label>نوع القاعة</label><div class="v empty" id="fRoomType">—</div></div>
       <div class="f"><label>سعة القاعة</label><div class="v empty" id="fCapacity">—</div></div>
+      <div class="f"><label>الفترة الحالية</label><div class="v empty" id="fPeriod">—</div></div>
       <div class="f"><label>اليوم</label><div class="v" id="fDay">—</div></div>
       <div class="f"><label>التاريخ</label><div class="v" id="fDate">—</div></div>
-      <div class="f"><label>الوقت</label><div class="v" id="fTime">—</div></div>
-      <div class="f"><label>الفترة الحالية</label><div class="v" id="fPeriod">—</div></div>
+      <div class="f full"><label>الوقت</label><div class="v" id="fTime">—</div></div>
     </div>
   </div>
 
   <div class="card">
     <h2>المحاضرة الجارية الآن</h2>
-    <div class="note-bar" id="lecMsg"></div>
-    <div class="grid" id="lecGrid">
+    <div class="bar" id="lecMsg"></div>
+    <div class="grid">
       <div class="f full"><label>المقرر</label><div class="v empty" id="fCourse">—</div></div>
       <div class="f"><label>كود المقرر</label><div class="v empty" id="fCode">—</div></div>
       <div class="f"><label>الشعبة</label><div class="v empty" id="fSec">—</div></div>
@@ -111,13 +125,15 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
   <div class="card">
     <h2>الملاحظات</h2>
     <div id="notesBox"></div>
-    <label style="font-size:11px;color:var(--muted);display:block;margin:14px 0 4px">ملاحظة حرة (اختيارية)</label>
+    <label class="lbl" style="font-size:11px;color:var(--muted);display:block;margin:14px 0 4px">
+      ملاحظة حرة (اختيارية)
+    </label>
     <textarea id="freeNote" placeholder="اكتب ملاحظتك هنا…"></textarea>
   </div>
 
 </div>
 
-<div style="text-align:center;font-size:11px;color:var(--muted);padding:0 0 8px" id="verTag"></div>
+<div id="verTag"></div>
 
 <div class="sendbar">
   <div class="inner">
@@ -129,41 +145,31 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
 
-  /* ═════════ إعدادات قابلة للتعديل ═════════ */
+  /* ═══════════════ إعدادات ═══════════════ */
 
-  var APP_VERSION = 'v1.6';        // يظهر أسفل الشاشة ليتأكد المستخدم أنه على أحدث نسخة
+  var APP_VERSION  = 'v2.0';
 
-  // نقطة الإرسال (Cloudflare Worker وسيط -> Apps Script)
-  var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';
-  // Worker قراءة صفحة القاعة من موقع الجامعة (يُستدعى فقط إذا لم يحمل الباركود رمز القاعة)
-  var ROOMSCAN_URL = 'https://room-scan.eqaunit.workers.dev';
-  // ملف الجدول الدراسي المحلي
-  var SCHEDULE_URL = 'schedule_data_summer.json';
+  var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';  // → Apps Script → الشيت
+  var ROOMSCAN_URL = 'https://room-scan.eqaunit.workers.dev';          // يقرأ صفحة القاعة
+  var SCHEDULE_URL = 'schedule_data_summer.json';                      // بجوار هذا الملف
 
-  // ★ خريطة أوقات الفترات — الفترة ٥٠ دقيقة، تبدأ رأس الساعة من الثامنة.
-  // شطر الطلاب: بريك 12:00–13:00 وبريك 15:00–16:00، والترقيم يقفز فوقهما (إزاحة ساعة عند كل بريك).
-  // شطر الطالبات: متصل بلا بريك.
-  var GRID_M = [                                   // طلاب
-    null,
+  // شبكة الفترات: كل فترة ٥٠ دقيقة تبدأ رأس الساعة من الثامنة.
+  // الطلاب: بريك 12:00–13:00 و 15:00–16:00، والترقيم يقفز فوقهما (إزاحة ساعة عند كل بريك).
+  // الطالبات: متصل بلا بريك.
+  var GRID_M = [null,
     ['08:00','08:50'], ['09:00','09:50'], ['10:00','10:50'], ['11:00','11:50'],
     /* بريك 12:00–13:00 */
     ['13:00','13:50'], ['14:00','14:50'],
     /* بريك 15:00–16:00 */
     ['16:00','16:50'], ['17:00','17:50'], ['18:00','18:50'], ['19:00','19:50'],
-    ['20:00','20:50'], ['21:00','21:50']
-  ];
-  var GRID_F = [                                   // طالبات
-    null,
+    ['20:00','20:50'], ['21:00','21:50']];
+
+  var GRID_F = [null,
     ['08:00','08:50'], ['09:00','09:50'], ['10:00','10:50'], ['11:00','11:50'],
     ['12:00','12:50'], ['13:00','13:50'], ['14:00','14:50'], ['15:00','15:50'],
-    ['16:00','16:50'], ['17:00','17:50'], ['18:00','18:50'], ['19:00','19:50']
-  ];
-  function gridFor(campus) {
-    return (campus && campus.indexOf('طالبات') !== -1) ? GRID_F : GRID_M;
-  }
+    ['16:00','16:50'], ['17:00','17:50'], ['18:00','18:50'], ['19:00','19:50']];
 
-  // مهلة سماح بالدقائق قبل بداية الفترة وبعد نهايتها (لالتقاط الزيارات على الحواف)
-  var GRACE_MIN = 10;
+  var GRACE_MIN = 10;   // سماح قبل الفترة وبعدها
 
   var NOTE_OPTIONS = [
     'عدم وجود محاضر',
@@ -178,15 +184,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var DAY_NAMES = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-  /* ═════════ حالة ═════════ */
+  /* ═══════════════ حالة ═══════════════ */
 
-  var SCHED = null;          // ملف الجدول
-  var room  = null;          // { key, label, code, building, campus, type, raw }
-  var lecture = null;        // المحاضرة المطابِقة
-  var allMatches = [];
+  var SCHED = null;        // ملف الجدول الدراسي
+  var room = null;         // القاعة المحدَّدة
+  var lecture = null;      // المحاضرة المطابِقة
+  var matches = [];        // كل المحاضرات المطابِقة (لكشف التعارض)
   var scanner = null, scanning = false;
 
-  var $ = function (id) { return document.getElementById(id); };
+  function $(id) { return document.getElementById(id); }
 
   function setV(id, val) {
     var el = $(id);
@@ -199,14 +205,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function msg(id, text, kind) {
     var el = $(id);
-    if (!text) { el.className = 'note-bar'; el.textContent = ''; return; }
-    el.className = 'note-bar on ' + (kind || 'info');
+    if (!text) { el.className = 'bar'; el.textContent = ''; return; }
+    el.className = 'bar on ' + (kind || 'info');
     el.textContent = text;
   }
 
-  /** fetch بمهلة: يفشل برسالة واضحة بدل التعليق إلى الأبد. */
+  function showDiag(scanText, respText) {
+    $('diag').style.display = 'block';
+    $('diagScan').textContent = scanText || '(فارغ)';
+    $('diagResp').textContent = respText || '(لا يوجد)';
+  }
+
+  function hideDiag() { $('diag').style.display = 'none'; }
+
+  /** fetch بمهلة — يفشل برسالة واضحة بدل التعليق الصامت. */
   function fetchT(url, opts, ms) {
-    ms = ms || 15000;
+    ms = ms || 20000;
     opts = opts || {};
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     if (ctl) opts.signal = ctl.signal;
@@ -221,9 +235,9 @@ document.addEventListener('DOMContentLoaded', function () {
     );
   }
 
-  /* ═════════ الزمن ═════════ */
+  /* ═══════════════ الزمن ═══════════════ */
 
-  // وضع محاكاة للاختبار خارج أوقات الدوام:  ?sim=2026-07-30T09:47
+  // وضع اختبار:  ?sim=2026-07-30T09:47
   var SIM = (function () {
     var m = location.search.match(/[?&]sim=([^&]+)/);
     if (!m) return null;
@@ -233,9 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function nowKSA() {
     if (SIM) return SIM;
-    // تثبيت المنطقة الزمنية على توقيت السعودية مهما كان ضبط الجهاز
-    var s = new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' });
-    return new Date(s);
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
   }
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -245,12 +257,15 @@ document.addEventListener('DOMContentLoaded', function () {
     return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
   }
 
-  function currentPeriod(d, grid) {
-    var m = d.getHours() * 60 + d.getMinutes();
+  function gridFor(campus) {
+    return (campus && campus.indexOf('طالبات') !== -1) ? GRID_F : GRID_M;
+  }
+
+  function periodAt(date, grid) {
+    var m = date.getHours() * 60 + date.getMinutes();
     for (var i = 1; i < grid.length; i++) {
       if (!grid[i]) continue;
-      if (m >= toMin(grid[i][0]) - GRACE_MIN &&
-          m <= toMin(grid[i][1]) + GRACE_MIN) return i;
+      if (m >= toMin(grid[i][0]) - GRACE_MIN && m <= toMin(grid[i][1]) + GRACE_MIN) return i;
     }
     return null;
   }
@@ -258,16 +273,17 @@ document.addEventListener('DOMContentLoaded', function () {
   function refreshClock() {
     var d = nowKSA();
     var dow = d.getDay();
-    var p = currentPeriod(d, gridFor(room && room.campus));
+    var p = periodAt(d, gridFor(room && room.campus));
     setV('fDay', DAY_NAMES[dow]);
     setV('fDate', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
     setV('fTime', pad(d.getHours()) + ':' + pad(d.getMinutes()));
-    setV('fPeriod', p ? ('الفترة ' + p) : (room ? 'بريك / خارج الفترات' : '—'));
+    setV('fPeriod', p ? ('الفترة ' + p) : (room ? 'بريك / خارج الدوام' : null));
     return { date: d, dow: dow, period: p };
   }
 
-  /* ═════════ توحيد مفتاح القاعة (مطابق لمنطق بناء الملف) ═════════ */
+  /* ═══════════════ مفتاح القاعة ═══════════════ */
 
+  // توحيد مطابق تماماً لمنطق بناء ملف الجدول
   function normRoom(s) {
     if (!s) return null;
     s = String(s).trim();
@@ -279,16 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return s.toUpperCase();
   }
 
-  // رمز القاعة الموحَّد: مبنى-دور.رقم  مثل 23-0.015
-  var ROOM_CODE_RE = /\b(\d{1,2})\s*-\s*(\d)\.(\d{2,3})\b/;
-
-  function extractRoomCode(text) {
-    if (!text) return null;
-    var m = String(text).match(ROOM_CODE_RE);
-    return m ? (m[1] + '-' + m[2] + '.' + m[3]) : null;
-  }
-
-  /* ═════════ تحميل الجدول ═════════ */
+  /* ═══════════════ الجدول الدراسي ═══════════════ */
 
   function loadSchedule() {
     return fetchT(SCHEDULE_URL, { cache: 'no-store' }, 25000)
@@ -299,73 +306,66 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (j) { SCHED = j; return j; });
   }
 
-  /* ═════════ البحث عن المحاضرة ═════════ */
-
-  function findLecture(roomKey) {
-    allMatches = [];
-    lecture = null;
-    var t = refreshClock();
-
-    if (!SCHED) { msg('lecMsg', 'لم يُحمَّل الجدول الدراسي بعد.', 'warn'); return; }
-
-    var entries = SCHED.index[roomKey];
-    if (!entries) {
-      msg('lecMsg', 'القاعة غير مدرجة في الجدول الدراسي لهذا الفصل.', 'warn');
-      clearLecture(); return;
-    }
-    if (t.dow > 4) {
-      msg('lecMsg', 'اليوم ' + DAY_NAMES[t.dow] + ' — لا دراسة.', 'info');
-      clearLecture(); return;
-    }
-    if (!t.period) {
-      msg('lecMsg', 'الوقت الحالي بريك أو خارج فترات اليوم الدراسي.', 'info');
-      clearLecture(); return;
-    }
-
-    // ★ المطابقة المحايدة: هل رقم الفترة الجارية ضمن فترات الصف؟
-    // تعمل مع الثنائي والثلاثي والرباعي وأي تجميع آخر.
-    // ورقم الفترة يُحسب بشبكة الشطر الذي يخصّ الصفّ نفسه (بريك الطلاب يزحزح ترقيمهم).
-    for (var i = 0; i < entries.length; i++) {
-      var e = entries[i];
-      if (e.d !== t.dow) continue;
-      var ep = currentPeriod(t.date, gridFor(e.cmp));
-      if (ep && e.p.indexOf(ep) !== -1) allMatches.push(e);
-    }
-
-    if (!allMatches.length) {
-      msg('lecMsg', 'لا توجد محاضرة مجدولة في هذه القاعة الآن (الفترة ' + t.period + ').', 'info');
-      clearLecture(); return;
-    }
-
-    lecture = allMatches[0];
-    msg('lecMsg', '', null);
-    showLecture(lecture);
-
-    if (allMatches.length > 1) {
-      $('fMulti').className = 'multi on';
-      $('fMulti').textContent = 'تنبيه: ' + allMatches.length + ' محاضرات مسجَّلة على القاعة في الفترة نفسها (تعارض جدولة). المعروض أولها.';
-    } else {
-      $('fMulti').className = 'multi';
-    }
-  }
-
-  function showLecture(e) {
-    setV('fCourse', e.cr); setV('fCode', e.cd); setV('fSec', e.sec);
-    setV('fTeacher', e.tea); setV('fAct', e.act); setV('fStu', e.stu);
-    setV('fDept', e.dep); setV('fCol', e.col);
-    setV('fSlots', e.p.join('، '));
-  }
-
   function clearLecture() {
     ['fCourse','fCode','fSec','fTeacher','fAct','fStu','fDept','fCol','fSlots']
       .forEach(function (id) { setV(id, null); });
     $('fMulti').className = 'multi';
+    lecture = null;
   }
 
-  /* ═════════ تثبيت القاعة ═════════ */
+  function findLecture(key) {
+    matches = [];
+    clearLecture();
+
+    var t = refreshClock();
+    if (!SCHED) { msg('lecMsg', 'لم يُحمَّل الجدول الدراسي.', 'warn'); return; }
+
+    var entries = SCHED.index[key];
+    if (!entries) {
+      msg('lecMsg', 'القاعة غير مدرجة في الجدول الدراسي لهذا الفصل.', 'warn');
+      return;
+    }
+    if (t.dow > 4) {
+      msg('lecMsg', 'اليوم ' + DAY_NAMES[t.dow] + ' — ليس يوماً دراسياً.', 'info');
+      return;
+    }
+
+    // المطابقة: هل الفترة الجارية ضمن فترات الصف؟
+    // محايدة تجاه حجم الكتلة (٢ أو ٣ أو ٤ فترات)، وتحسب الفترة بشبكة شطر الصفّ نفسه.
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (e.d !== t.dow) continue;
+      var ep = periodAt(t.date, gridFor(e.cmp));
+      if (ep && e.p.indexOf(ep) !== -1) matches.push(e);
+    }
+
+    if (!matches.length) {
+      msg('lecMsg', t.period
+        ? ('لا توجد محاضرة مجدولة في هذه القاعة الآن (الفترة ' + t.period + ').')
+        : 'الوقت الحالي بريك أو خارج فترات اليوم الدراسي.', 'info');
+      return;
+    }
+
+    lecture = matches[0];
+    msg('lecMsg', '', null);
+
+    setV('fCourse', lecture.cr);  setV('fCode', lecture.cd);   setV('fSec', lecture.sec);
+    setV('fTeacher', lecture.tea); setV('fAct', lecture.act);  setV('fStu', lecture.stu);
+    setV('fDept', lecture.dep);   setV('fCol', lecture.col);
+    setV('fSlots', lecture.p.join('، '));
+
+    if (matches.length > 1) {
+      $('fMulti').className = 'multi on';
+      $('fMulti').textContent = 'تنبيه: ' + matches.length +
+        ' محاضرات مسجَّلة على القاعة في الفترة نفسها (تعارض جدولة). المعروض أولها.';
+    }
+  }
+
+  /* ═══════════════ تثبيت القاعة ═══════════════ */
 
   function applyRoom(info) {
     var key = normRoom(info.code || info.label);
+
     room = {
       key: key,
       label: info.label || info.code || key,
@@ -373,20 +373,20 @@ document.addEventListener('DOMContentLoaded', function () {
       building: info.building || null,
       campus: info.campus || null,
       type: info.type || null,
-      capacity: info.capacity || null,
-      source: info.source || 'باركود'
+      capacity: info.capacity || null
     };
 
-    // إثراء من الجدول: بيانات الجدول أوثق من نصّ الصفحة، فلها الأولوية
+    // بيانات الجدول أوثق من نصّ صفحة الموقع، فلها الأولوية
     if (SCHED && SCHED.rooms[key]) {
       var m = SCHED.rooms[key];
-      if (m.cmp) room.campus = m.cmp;              // المقر من الجدول يُقدَّم دائماً
-      room.code = m.code || room.code;
-      room.label = m.label || room.label;
+      if (m.cmp) room.campus = m.cmp;
+      if (m.code) room.code = m.code;
+      if (m.label) room.label = m.label;
     }
-    // رقم المبنى من بادئة الرمز الموحَّد
+
+    // رقم المبنى من بادئة الرمز إن لم تُعطه الصفحة
     if (!room.building) {
-      var mm = (room.code || room.label || '').match(/^(\d{1,2})-/);
+      var mm = String(room.code || room.label || '').match(/^(\d{1,2})-/);
       if (mm) room.building = 'مبنى ' + mm[1];
     }
 
@@ -400,75 +400,74 @@ document.addEventListener('DOMContentLoaded', function () {
     $('btnSend').disabled = false;
   }
 
-  /* ═════════ الماسح ═════════ */
+  /* ═══════════════ المسح ═══════════════ */
 
   function stopScanner() {
-    if (scanner && scanning) {
-      scanner.stop().then(function () {
-        scanner.clear();
-        $('reader').className = '';
-        scanning = false;
-        $('btnScan').textContent = 'مسح باركود اللوحة';
-      }).catch(function () { scanning = false; });
-    }
-  }
-
-  function showDiag(scanText, respText) {
-    $('diag').style.display = 'block';
-    $('diagScan').textContent = scanText || '(فارغ)';
-    if (respText !== undefined) $('diagResp').textContent = respText || '(لا يوجد)';
+    if (!scanner || !scanning) return;
+    scanning = false;
+    scanner.stop().then(function () {
+      scanner.clear();
+      $('reader').className = '';
+      $('btnScan').textContent = 'مسح باركود اللوحة';
+    }).catch(function () { /* تجاهل */ });
   }
 
   function onScan(text) {
     stopScanner();
-    msg('scanMsg', 'تمت القراءة… جارٍ قراءة صفحة القاعة.', 'info');
 
-    // الباركود يحمل رابط صفحة القاعة -> الـWorker يقرأها ويُرجع بياناتها
-    fetchT(ROOMSCAN_URL + '?url=' + encodeURIComponent(text), null, 20000)
+    // الباركود يحمل رابط صفحة القاعة: uqu.edu.sa/App/BuildingsRoom/1215
+    // نمرّر المعرّف الرقمي وحده — الصيغة التي ثبت نجاحها — ونعود للرابط الكامل عند تعذّره.
+    var rid = (String(text).match(/BuildingsRoom\/(\d+)/i) || [])[1];
+    var qs = rid ? ('?id=' + rid) : ('?url=' + encodeURIComponent(text));
+
+    msg('scanMsg', 'تمت القراءة' + (rid ? ' (قاعة ' + rid + ')' : '') + ' — جارٍ جلب بياناتها…', 'info');
+
+    fetchT(ROOMSCAN_URL + qs, null, 20000)
       .then(function (r) { return r.text(); })
       .then(function (body) {
         var d = null;
         try { d = JSON.parse(body); } catch (e) { d = null; }
 
         if (!d || !d.code) {
-          msg('scanMsg', 'تعذّر استخراج رمز القاعة من الصفحة. انسخ ما أدناه وأرسله.', 'warn');
-          showDiag(text, body.slice(0, 2500));
+          msg('scanMsg', 'تعذّر استخراج رمز القاعة. انسخ ما أدناه وأرسله.', 'warn');
+          showDiag(text, body.slice(0, 2000));
           return;
         }
 
-        msg('scanMsg', 'تم تحديد القاعة من اللوحة.', 'ok');
-        $('diag').style.display = 'none';
+        hideDiag();
+        msg('scanMsg', 'تم تحديد القاعة ' + d.code + '.', 'ok');
         applyRoom({
           code: d.code,
           label: d.code,
           building: d.building || null,
           campus: d.campus || null,
           type: d.roomType || null,
-          capacity: d.capacity || null,
-          source: 'باركود'
+          capacity: d.capacity || null
         });
       })
       .catch(function (err) {
         msg('scanMsg', 'تعذّر الاتصال بخدمة القراءة: ' + err.message, 'warn');
-        showDiag(text, 'خطأ اتصال');
+        showDiag(text, err.message);
       });
   }
 
-
   $('btnScan').addEventListener('click', function () {
     if (scanning) { stopScanner(); return; }
+
     if (typeof Html5Qrcode === 'undefined') {
       msg('scanMsg', 'لم تُحمَّل مكتبة المسح. تحقق من الاتصال ثم أعد فتح الصفحة.', 'warn');
       return;
     }
+
     msg('scanMsg', 'جارٍ فتح الكاميرا… اسمح بالإذن عند طلبه.', 'info');
     $('reader').className = 'on';
     scanner = new Html5Qrcode('reader');
+
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 230, height: 230 } },
       function (decoded) { onScan(decoded); },
-      function () {}
+      function () { /* إخفاقات القراءة المستمرة — تُتجاهل */ }
     ).then(function () {
       scanning = true;
       $('btnScan').textContent = 'إيقاف المسح';
@@ -479,31 +478,44 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  /* ═════════ الملاحظات ═════════ */
+  /* ═══════════════ الملاحظات ═══════════════ */
 
-  NOTE_OPTIONS.forEach(function (txt, i) {
+  NOTE_OPTIONS.forEach(function (txt) {
     var lab = document.createElement('label');
     lab.className = 'chk';
-    lab.innerHTML = '<input type="checkbox" value="' + txt + '" data-i="' + i + '"><span>' + txt + '</span>';
-    lab.querySelector('input').addEventListener('change', function () {
-      lab.className = this.checked ? 'chk sel' : 'chk';
+
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = txt;
+
+    var sp = document.createElement('span');
+    sp.textContent = txt;
+
+    cb.addEventListener('change', function () {
+      lab.className = cb.checked ? 'chk sel' : 'chk';
     });
+
+    lab.appendChild(cb);
+    lab.appendChild(sp);
     $('notesBox').appendChild(lab);
   });
 
   function selectedNotes() {
     var out = [];
-    $('notesBox').querySelectorAll('input:checked').forEach(function (c) { out.push(c.value); });
+    var boxes = $('notesBox').querySelectorAll('input:checked');
+    for (var i = 0; i < boxes.length; i++) out.push(boxes[i].value);
     return out;
   }
 
-  /* ═════════ الإرسال ═════════ */
+  /* ═══════════════ الإرسال ═══════════════ */
 
   $('btnSend').addEventListener('click', function () {
-    if (!room) { msg('scanMsg', 'حدِّد القاعة أولاً.', 'warn'); return; }
+    if (!room) { msg('scanMsg', 'امسح باركود القاعة أولاً.', 'warn'); return; }
+
     var t = refreshClock();
     var btn = $('btnSend');
-    btn.disabled = true; btn.textContent = 'جارٍ الإرسال…';
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الإرسال…';
 
     var payload = {
       // الزمن
@@ -512,17 +524,14 @@ document.addEventListener('DOMContentLoaded', function () {
       'الوقت': $('fTime').textContent,
       'الطابع_الزمني': nowKSA().toISOString(),
       'الفترة': t.period || '',
-      // القاعة (من الباركود)
+      // القاعة
       'رقم_القاعة': room.label || '',
       'رمز_القاعة': room.code || '',
       'المبنى': room.building || '',
       'المقر': room.campus || '',
       'نوع_القاعة': room.type || '',
       'سعة_القاعة': room.capacity || '',
-      'مصدر_التحديد': room.source || '',
-      'وضع_اختبار': SIM ? 'نعم' : '',
-      'إصدار_النموذج': APP_VERSION,
-      // المحاضرة (من الجدول)
+      // المحاضرة
       'المقرر': lecture ? (lecture.cr || '') : '',
       'كود_المقرر': lecture ? (lecture.cd || '') : '',
       'الشعبة': lecture ? (lecture.sec || '') : '',
@@ -533,36 +542,41 @@ document.addEventListener('DOMContentLoaded', function () {
       'عدد_الطلبة': lecture ? (lecture.stu || '') : '',
       'فترات_المحاضرة': lecture ? lecture.p.join('، ') : '',
       'حالة_الجدولة': lecture ? 'مجدولة' : 'غير مجدولة',
-      'تعارض_جدولة': allMatches.length > 1 ? allMatches.length : '',
+      'تعارض_جدولة': matches.length > 1 ? matches.length : '',
       // الرصد
       'الملاحظات': selectedNotes().join(' | '),
-      'ملاحظات_حرة': $('freeNote').value.trim()
+      'ملاحظات_حرة': $('freeNote').value.trim(),
+      // وسوم
+      'إصدار_النموذج': APP_VERSION,
+      'وضع_اختبار': SIM ? 'نعم' : ''
     };
 
     fetchT(SUBMIT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    })
-      .then(function (r) { return r.text().then(function (tx) { return { ok: r.ok, tx: tx }; }); })
+    }, 25000)
+      .then(function (r) {
+        return r.text().then(function (tx) { return { ok: r.ok, tx: tx }; });
+      })
       .then(function (res) {
         if (!res.ok) throw new Error(res.tx || 'فشل الإرسال');
 
-        // ردّ HTTP 200 لا يعني النجاح: Apps Script يردّ 200 حتى عند فشله داخلياً
+        // HTTP 200 لا يعني الحفظ: Apps Script يردّ 200 حتى عند فشله داخلياً
         var body = null;
         try { body = JSON.parse(res.tx); } catch (e) { body = null; }
-        if (body && body.ok === false) {
-          throw new Error(body.error || 'رفض الخادم الحفظ');
-        }
+
+        if (body && body.ok === false) throw new Error(body.error || 'رفض الخادم الحفظ');
+
         if (!body || body.ok !== true) {
-          msg('scanMsg', 'أُرسل، لكن الخادم لم يؤكّد الحفظ. راجع الشيت.', 'warn');
-          showDiag('(إرسال)', res.tx.slice(0, 1200));
+          msg('scanMsg', 'أُرسل، لكن الخادم لم يؤكّد الحفظ.', 'warn');
+          showDiag('(إرسال)', res.tx.slice(0, 1500));
           btn.disabled = false; btn.textContent = 'إرسال';
           return;
         }
 
-        msg('scanMsg', 'تم تسجيل الرصد — صفّ رقم ' + (body.row || '?') +
-                       (body.file ? ' في «' + body.file + '»' : '') + '.', 'ok');
+        hideDiag();
+        msg('scanMsg', 'تم تسجيل الرصد — صفّ ' + (body.row || '?') + '.', 'ok');
         btn.textContent = 'تم الإرسال ✓';
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setTimeout(function () { location.reload(); }, 2200);
@@ -574,28 +588,29 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  /* ═════════ الإقلاع ═════════ */
-
-  if (SIM) {
-    var bn = document.createElement('div');
-    bn.style.cssText = 'background:#B87B02;color:#fff;padding:9px 14px;text-align:center;font-size:13px;font-weight:700';
-    bn.textContent = 'وضع اختبار — الزمن محاكى: ' + SIM.toLocaleString('ar-SA');
-    document.body.insertBefore(bn, document.body.firstChild);
-    $('btnSend').textContent = 'إرسال (وضع اختبار)';
-  }
+  /* ═══════════════ الإقلاع ═══════════════ */
 
   $('verTag').textContent = 'إصدار ' + APP_VERSION;
+
+  if (SIM) {
+    var bar = $('simBar');
+    bar.style.display = 'block';
+    bar.textContent = 'وضع اختبار — الزمن محاكى: ' + SIM.toLocaleString('ar-SA');
+    $('btnSend').textContent = 'إرسال (وضع اختبار)';
+  }
 
   refreshClock();
   setInterval(function () {
     refreshClock();
-    if (room) findLecture(room.key);   // تحديث المحاضرة مع تغيّر الفترة
+    if (room) findLecture(room.key);     // تتبّع تغيّر الفترة
   }, 60000);
 
   loadSchedule().then(function (j) {
-    msg('scanMsg', 'جاهز (' + APP_VERSION + ') — ' + (j.term || 'الجدول') + ' · ' + Object.keys(j.index).length + ' قاعة.', 'ok');
+    msg('scanMsg', 'جاهز (' + APP_VERSION + ') — ' + (j.term || 'الجدول') +
+                   ' · ' + Object.keys(j.index).length + ' قاعة.', 'ok');
   }).catch(function (e) {
-    msg('scanMsg', 'تعذّر تحميل الجدول الدراسي (' + e.message + '). سيعمل النموذج دون بيانات المحاضرة.', 'warn');
+    msg('scanMsg', 'تعذّر تحميل الجدول الدراسي (' + e.message +
+                   '). سيعمل النموذج دون بيانات المحاضرة.', 'warn');
   });
 
 });
