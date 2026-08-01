@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ═══════════════ إعدادات ═══════════════ */
 
-  var APP_VERSION  = 'v2.2';
+  var APP_VERSION  = 'v2.4';
 
   var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';  // → Apps Script → الشيت
   var ROOMSCAN_URL = 'https://room-scan.eqaunit.workers.dev';          // يقرأ صفحة القاعة
@@ -377,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function () {
       code: info.code || null,
       buildingNo: null,
       buildingName: null,
-      buildingFull: null,
       campus: info.campus || null
     };
 
@@ -406,15 +405,12 @@ document.addEventListener('DOMContentLoaded', function () {
         room.buildingName = bi;
       } else if (bi) {
         room.buildingName = bi.name || null;
-        room.buildingFull = bi.full || bi.college || null;
       }
     }
 
     setV('fRoom', room.label);
     setV('fBuildingNo', room.buildingNo);
-    setV('fBuildingName', room.buildingName
-      ? (room.buildingName + (room.buildingFull ? ' — ' + room.buildingFull : ''))
-      : null);
+    setV('fBuildingName', room.buildingName);
     setV('fCampus', room.campus);
 
     findLecture(key);
@@ -550,7 +546,6 @@ document.addEventListener('DOMContentLoaded', function () {
       'رمز_القاعة': room.code || '',
       'رقم_المبنى': room.buildingNo || '',
       'اسم_المبنى': room.buildingName || '',
-      'وصف_المبنى': room.buildingFull || '',
       'المقر': room.campus || '',
       // المحاضرة
       'المقرر': lecture ? (lecture.cr || '') : '',
@@ -563,13 +558,9 @@ document.addEventListener('DOMContentLoaded', function () {
       'عدد_الطلبة': lecture ? (lecture.stu || '') : '',
       'فترات_المحاضرة': lecture ? lecture.p.join('، ') : '',
       'حالة_الجدولة': lecture ? 'مجدولة' : 'غير مجدولة',
-      'تعارض_جدولة': matches.length > 1 ? matches.length : '',
       // الرصد
       'الملاحظات': selectedNotes().join(' | '),
-      'ملاحظات_حرة': $('freeNote').value.trim(),
-      // وسوم
-      'إصدار_النموذج': APP_VERSION,
-      'وضع_اختبار': SIM ? 'نعم' : ''
+      'ملاحظات_حرة': $('freeNote').value.trim()
     };
 
     fetchT(SUBMIT_URL, {
