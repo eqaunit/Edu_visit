@@ -94,14 +94,13 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
     <h2>بيانات القاعة والزمن</h2>
     <div class="grid">
       <div class="f key"><label>رقم القاعة</label><div class="v empty" id="fRoom">—</div></div>
-      <div class="f key"><label>المبنى</label><div class="v empty" id="fBuilding">—</div></div>
+      <div class="f key"><label>رقم المبنى</label><div class="v empty" id="fBuildingNo">—</div></div>
+      <div class="f"><label>اسم المبنى</label><div class="v empty" id="fBuildingName">—</div></div>
       <div class="f"><label>المقر</label><div class="v empty" id="fCampus">—</div></div>
-      <div class="f"><label>نوع القاعة</label><div class="v empty" id="fRoomType">—</div></div>
-      <div class="f"><label>سعة القاعة</label><div class="v empty" id="fCapacity">—</div></div>
-      <div class="f"><label>الفترة الحالية</label><div class="v empty" id="fPeriod">—</div></div>
+      <div class="f"><label>المحاضرة الحالية</label><div class="v empty" id="fPeriod">—</div></div>
       <div class="f"><label>اليوم</label><div class="v" id="fDay">—</div></div>
       <div class="f"><label>التاريخ</label><div class="v" id="fDate">—</div></div>
-      <div class="f full"><label>الوقت</label><div class="v" id="fTime">—</div></div>
+      <div class="f"><label>الوقت</label><div class="v" id="fTime">—</div></div>
     </div>
   </div>
 
@@ -133,6 +132,15 @@ textarea{width:100%;min-height:78px;padding:11px;border:1.5px solid var(--border
 
 </div>
 
+<div id="thankYouScreen" style="display:none;text-align:center;padding:60px 24px">
+  <div style="font-size:56px">✅</div>
+  <div style="font-size:20px;font-weight:700;color:var(--dark-green);margin-top:14px">شكراً لتعاونكم</div>
+  <div style="font-size:15px;color:var(--text);margin-top:10px;line-height:1.8">
+    تم تسليم النموذج إلى وحدة ضمان الجودة التعليمية<br>
+    <a href="mailto:eqa_unit@uqu.edu.sa" style="color:var(--dark-green);font-weight:700">eqa_unit@uqu.edu.sa</a>
+  </div>
+</div>
+
 <div id="verTag"></div>
 
 <div class="sendbar">
@@ -147,11 +155,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ═══════════════ إعدادات ═══════════════ */
 
-  var APP_VERSION  = 'v2.0';
+  var APP_VERSION  = 'v2.2';
 
   var SUBMIT_URL   = 'https://leadership-visits.eqaunit.workers.dev';  // → Apps Script → الشيت
   var ROOMSCAN_URL = 'https://room-scan.eqaunit.workers.dev';          // يقرأ صفحة القاعة
   var SCHEDULE_URL = 'schedule_data_summer.json';                      // بجوار هذا الملف
+  var BUILDINGS_URL = 'buildings.json';                                // { "23": "ق1", ... } — اختياري
 
   // شبكة الفترات: كل فترة ٥٠ دقيقة تبدأ رأس الساعة من الثامنة.
   // الطلاب: بريك 12:00–13:00 و 15:00–16:00، والترقيم يقفز فوقهما (إزاحة ساعة عند كل بريك).
@@ -174,12 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var NOTE_OPTIONS = [
     'عدم وجود محاضر',
     'عدم وجود طلاب',
-    'المحاضر مختلف عن المسجَّل بالجدول',
-    'القاعة مغلقة',
-    'لا توجد محاضرة رغم جدولتها',
-    'محاضرة قائمة غير مسجَّلة بالجدول',
-    'القاعة غير مهيأة (تكييف/إضاءة/مقاعد)',
-    'خلل في التجهيزات التقنية'
+    'القاعة غير مهيأة (تكييف – إضاءة – مقاعد – وسائل تعليمية/ تقنية)'
   ];
 
   var DAY_NAMES = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -187,6 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ═══════════════ حالة ═══════════════ */
 
   var SCHED = null;        // ملف الجدول الدراسي
+  var BUILDINGS = {};      // خريطة رقم المبنى ← اسمه
   var room = null;         // القاعة المحدَّدة
   var lecture = null;      // المحاضرة المطابِقة
   var matches = [];        // كل المحاضرات المطابِقة (لكشف التعارض)
@@ -277,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setV('fDay', DAY_NAMES[dow]);
     setV('fDate', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
     setV('fTime', pad(d.getHours()) + ':' + pad(d.getMinutes()));
-    setV('fPeriod', p ? ('الفترة ' + p) : (room ? 'بريك / خارج الدوام' : null));
+    setV('fPeriod', p ? ('المحاضرة ' + p) : (room ? 'بريك / خارج الدوام' : null));
     return { date: d, dow: dow, period: p };
   }
 
@@ -370,10 +375,10 @@ document.addEventListener('DOMContentLoaded', function () {
       key: key,
       label: info.label || info.code || key,
       code: info.code || null,
-      building: info.building || null,
-      campus: info.campus || null,
-      type: info.type || null,
-      capacity: info.capacity || null
+      buildingNo: null,
+      buildingName: null,
+      buildingFull: null,
+      campus: info.campus || null
     };
 
     // بيانات الجدول أوثق من نصّ صفحة الموقع، فلها الأولوية
@@ -384,17 +389,33 @@ document.addEventListener('DOMContentLoaded', function () {
       if (m.label) room.label = m.label;
     }
 
-    // رقم المبنى من بادئة الرمز إن لم تُعطه الصفحة
-    if (!room.building) {
-      var mm = String(room.code || room.label || '').match(/^(\d{1,2})-/);
-      if (mm) room.building = 'مبنى ' + mm[1];
+    // رقم المبنى من بادئة الرمز (23-0.015 ← 23)
+    var mm = String(room.code || room.label || '').match(/^(\d{1,3})-/);
+    if (mm) {
+      room.buildingNo = mm[1];
+    } else if (info.building) {
+      var mb = String(info.building).match(/(\d{1,3})/);
+      room.buildingNo = mb ? mb[1] : String(info.building);
+    }
+
+    // اسم المبنى من خريطة المباني — يقبل نصّاً بسيطاً أو كائناً {name, full, college}
+    if (room.buildingNo) {
+      var n = String(parseInt(room.buildingNo, 10));
+      var bi = BUILDINGS[room.buildingNo] || BUILDINGS[n] || null;
+      if (typeof bi === 'string') {
+        room.buildingName = bi;
+      } else if (bi) {
+        room.buildingName = bi.name || null;
+        room.buildingFull = bi.full || bi.college || null;
+      }
     }
 
     setV('fRoom', room.label);
-    setV('fBuilding', room.building);
+    setV('fBuildingNo', room.buildingNo);
+    setV('fBuildingName', room.buildingName
+      ? (room.buildingName + (room.buildingFull ? ' — ' + room.buildingFull : ''))
+      : null);
     setV('fCampus', room.campus);
-    setV('fRoomType', room.type);
-    setV('fCapacity', room.capacity);
 
     findLecture(key);
     $('btnSend').disabled = false;
@@ -527,10 +548,10 @@ document.addEventListener('DOMContentLoaded', function () {
       // القاعة
       'رقم_القاعة': room.label || '',
       'رمز_القاعة': room.code || '',
-      'المبنى': room.building || '',
+      'رقم_المبنى': room.buildingNo || '',
+      'اسم_المبنى': room.buildingName || '',
+      'وصف_المبنى': room.buildingFull || '',
       'المقر': room.campus || '',
-      'نوع_القاعة': room.type || '',
-      'سعة_القاعة': room.capacity || '',
       // المحاضرة
       'المقرر': lecture ? (lecture.cr || '') : '',
       'كود_المقرر': lecture ? (lecture.cd || '') : '',
@@ -576,10 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         hideDiag();
-        msg('scanMsg', 'تم تسجيل الرصد — صفّ ' + (body.row || '?') + '.', 'ok');
-        btn.textContent = 'تم الإرسال ✓';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(function () { location.reload(); }, 2200);
+        showThankYou();
       })
       .catch(function (err) {
         msg('scanMsg', 'تعذّر الإرسال: ' + err.message, 'warn');
@@ -587,6 +605,16 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.disabled = false; btn.textContent = 'إرسال';
       });
   });
+
+  /** شاشة الشكر — تُخفي النموذج بالكامل كما في نموذج الزيارات الميدانية. */
+  function showThankYou() {
+    var w = document.querySelector('.wrap');
+    if (w) w.style.display = 'none';
+    var sb = document.querySelector('.sendbar');
+    if (sb) sb.style.display = 'none';
+    $('thankYouScreen').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   /* ═══════════════ الإقلاع ═══════════════ */
 
@@ -604,6 +632,11 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshClock();
     if (room) findLecture(room.key);     // تتبّع تغيّر الفترة
   }, 60000);
+
+  fetchT(BUILDINGS_URL, { cache: 'no-store' }, 10000)
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { if (j) BUILDINGS = j; })
+    .catch(function () { /* الملف اختياري */ });
 
   loadSchedule().then(function (j) {
     msg('scanMsg', 'جاهز (' + APP_VERSION + ') — ' + (j.term || 'الجدول') +
