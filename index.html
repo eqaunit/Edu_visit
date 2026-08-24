@@ -71,6 +71,14 @@
     font-size:15.5px;font-family:inherit;background:var(--bg-page);color:var(--txt-dark);}
   .filter-row-full select:disabled{opacity:.5;}
   .chip-toggles{display:flex;flex-wrap:wrap;gap:9px;}
+  .activity-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;}
+  .activity-check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none;
+    border:1px solid var(--border-clr);background:var(--bg-page);border-radius:9px;
+    padding:9px 12px;font-size:14px;transition:all .12s;}
+  .activity-check:hover{border-color:var(--light-green);}
+  .activity-check.on{background:var(--green-ok-bg);border-color:var(--light-green);color:var(--dark-green);font-weight:600;}
+  .activity-check input{width:17px;height:17px;accent-color:var(--dark-green);margin:0;cursor:pointer;}
+  .activity-hint{font-size:12px;color:var(--txt-muted);margin-top:7px;}
   .chip-toggle{border:1px solid var(--border-clr);background:var(--bg-page);color:var(--txt-body);
     font-size:14.5px;padding:0 17px;height:44px;line-height:44px;border-radius:9px;cursor:pointer;
     user-select:none;white-space:nowrap;}
@@ -215,6 +223,12 @@
       <label>المبنى</label>
       <select id="buildingSelect" disabled><option value="">اختر المقر أولاً</option></select>
     </div>
+
+    <div class="filter-row-full">
+      <label>الأنشطة المشمولة بالزيارة</label>
+      <div class="activity-checks" id="activityChecks"></div>
+      <div class="activity-hint">يُستثنى نمط الدراسة «عن بُعد» و«خارج الجامعة» في كل الحالات.</div>
+    </div>
   </div>
 
   <div class="hidden" id="resultsSection">
@@ -283,7 +297,17 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   };
   const PERIOD_LABELS = {'صباحية1':'صباحية ١','صباحية2':'صباحية ٢','الظهر':'الظهر','المسائية1':'المسائية ١','المسائية2':'المسائية ٢'};
   const ACTIVE_PERIODS = ['صباحية1','صباحية2','الظهر','المسائية1','المسائية2'];
-  const ACTIVITY_WHITELIST = ['نظري','نشاط1','نشاط3','نشاط4'];
+  // أنواع الأنشطة المتاحة للزيارة — يُستثنى نمط الدراسة «عن بعد» دائماً.
+  // القيم بعد التطبيع (حذف المسافات) كما تَرِد في عمود «النشاط».
+  const ACTIVITY_TYPES = [
+    {key:'نظري',   label:'نظري'},
+    {key:'عملي',   label:'عملي'},
+    {key:'استديو', label:'استديو'},
+    {key:'نشاط1',  label:'نشاط ١'},
+    {key:'نشاط3',  label:'نشاط ٣'},
+    {key:'نشاط4',  label:'نشاط ٤'}
+  ];
+  const DEFAULT_ACTIVITIES = ['نظري'];
   const OUTPUT_HEADERS = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
     'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
     'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
@@ -370,6 +394,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   let aoaData=null, headerRowIdx=-1, colIdx={}, dayColIdx={};
   let originalFileName='زيارة';
   let selectedPeriods = new Set();
+  let selectedActivities = new Set(DEFAULT_ACTIVITIES);
   let selectedBuilding = '';
   let lastResults = [];
   let lastGeneratedLink = '';
@@ -378,7 +403,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   const els = {};
   ['fileInput','loadingMsg','uploadError','uploadCard','loadedBar','loadedFileName','changeFileBtn',
-   'filtersCard','semesterSelect','maqarSelect','buildingSelect','daySelect','weekSelect','periodToggles',
+   'filtersCard','semesterSelect','maqarSelect','buildingSelect','daySelect','weekSelect','periodToggles','activityChecks',
    'resultsSection','counterBadge','tableWrap','downloadBtn',
    'employeeName','genLinkBtn','linkResultBox','copyLinkBtn','shareLinkBtn',
    'shortenBtn','shortenStatus','shortResultBox','shortResultInput','copyShortBtn','shareShortBtn'
@@ -425,6 +450,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
       populateMaqarOptions();
       renderPeriodToggles();
+      renderActivityChecks();
       els.loadingMsg.classList.add('hidden');
       els.uploadCard.classList.add('hidden');
       els.loadedFileName.textContent = file.name;
@@ -473,6 +499,22 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
         chip.classList.toggle('active');
         refresh();
       });
+    });
+  }
+
+  function renderActivityChecks(){
+    els.activityChecks.innerHTML = ACTIVITY_TYPES.map(a=>{
+      const on = selectedActivities.has(a.key) ? ' checked' : '';
+      return `<label class="activity-check"><input type="checkbox" data-activity="${a.key}"${on}><span>${a.label}</span></label>`;
+    }).join('');
+    els.activityChecks.querySelectorAll('input[data-activity]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        const k = cb.dataset.activity;
+        if(cb.checked) selectedActivities.add(k); else selectedActivities.delete(k);
+        cb.closest('.activity-check').classList.toggle('on', cb.checked);
+        refresh();
+      });
+      cb.closest('.activity-check').classList.toggle('on', cb.checked);
     });
   }
 
@@ -530,10 +572,15 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     const computedDateObj = computeDate(targetSemester, targetWeek, targetDay);
     const targetDateStr = computedDateObj ? fmtDate(computedDateObj) : '';
 
-    if(!targetMaqarRaw || !targetBuilding || !targetDateStr || isNaN(targetWeek) || selectedPeriods.size===0){
+    if(!targetMaqarRaw || !targetBuilding || !targetDateStr || isNaN(targetWeek)
+       || selectedPeriods.size===0 || selectedActivities.size===0){
       lastResults = [];
       renderCounter(null);
-      els.tableWrap.innerHTML = '<div class="placeholder-box">أكمل المعايير أعلاه (المقر، المبنى، اليوم، الأسبوع، وفترة واحدة على الأقل) لعرض المحاضرات المطابقة.</div>';
+      const missingAct = selectedActivities.size===0;
+      els.tableWrap.innerHTML = '<div class="placeholder-box">' + (missingAct
+        ? 'اختر نوع نشاط واحداً على الأقل من «الأنشطة المشمولة بالزيارة».'
+        : 'أكمل المعايير أعلاه (المقر، المبنى، اليوم، الأسبوع، وفترة واحدة على الأقل) لعرض المحاضرات المطابقة.')
+        + '</div>';
       els.downloadBtn.disabled = true;
       return;
     }
@@ -554,7 +601,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
         const dayVal = row[dayIdx];
         if(dayVal==null || String(dayVal).trim()==='') continue;
         if(colIdx.نمط_دراسة>-1 && norm(row[colIdx.نمط_دراسة]) !== 'حضوري') continue;
-        if(colIdx.نشاط>-1 && !ACTIVITY_WHITELIST.includes(normActivity(row[colIdx.نشاط]))) continue;
+        if(colIdx.نشاط>-1 && !selectedActivities.has(normActivity(row[colIdx.نشاط]))) continue;
         const weekVal = colIdx.اسبوع>-1 ? Number(row[colIdx.اسبوع]) : 0;
         if(!(weekVal===0 || weekVal===targetWeek)) continue;
         const roomCode = colIdx.رقم_قاعة>-1 ? norm(row[colIdx.رقم_قاعة]) : '';
@@ -918,6 +965,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   });
 
   renderPeriodToggles();
+  renderActivityChecks();
 })();
 </script>
 </body>
