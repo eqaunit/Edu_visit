@@ -344,14 +344,16 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     }
     return 0;
   }
+  function minPeriod(s){
+    const nums=(String(s||'').match(/\d+/g)||[]).map(n=>parseInt(n,10));
+    return nums.length? Math.min(...nums) : 0;
+  }
   function comparePeriod(a,b){
-    const pa=parseInt((String(a||'').match(/\d+/)||['0'])[0],10);
-    const pb=parseInt((String(b||'').match(/\d+/)||['0'])[0],10);
-    return pa-pb;
+    return minPeriod(a)-minPeriod(b);
   }
   function compareRows(r1,r2){
-    const c=compareRooms(r1.room,r2.room);
-    return c!==0? c : comparePeriod(r1.period,r2.period);
+    const c=comparePeriod(r1.period,r2.period);
+    return c!==0? c : compareRooms(r1.room,r2.room);
   }
   function buildStorageKey(){
     const raw = `visit_${meta.campus}_${meta.date}_${dataRows.length}`;
