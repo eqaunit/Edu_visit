@@ -86,6 +86,8 @@
     padding:4px 12px;border-radius:8px;}
   .room-badge-alt{background:var(--gold-700);color:#fff;font-weight:700;font-size:16.5px;
     padding:4px 12px;border-radius:8px;}
+  .period-badge{background:#1E40AF;color:#fff;font-weight:700;font-size:16.5px;
+    padding:4px 12px;border-radius:8px;}
   .status-dot{width:11px;height:11px;border-radius:50%;background:var(--gray-500);}
   .status-dot.done{background:var(--green-ok);}
   .card-course{font-weight:700;font-size:16.5px;margin-top:8px;color:var(--txt-dark);}
@@ -551,6 +553,10 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   function hasIssue(r){
     return !!(r && r.entry && (r.entry.member==='لا' || r.entry.student==='لا'));
   }
+  /** زرّ التوثيق يُفعَّل عند غياب العضو (سواء حضر الطلاب أو غابوا). */
+  function photoAllowed(r){
+    return !!(r && r.entry && r.entry.member==='لا');
+  }
   /** التصوير إلزامي فقط عند غياب العضو وغياب الطلاب معاً. */
   function photoRequired(r){
     return !!(r && r.entry && r.entry.member==='لا' && r.entry.student==='لا');
@@ -574,11 +580,12 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
           <div class="room-badges">
             <span class="room-badge">${esc(r.room)}</span>
             ${r.code? `<span class="room-badge-alt">${esc(r.code)}</span>` : ''}
+            ${r.period? `<span class="period-badge">المحاضرة ${esc(r.period)}</span>` : ''}
           </div>
           <span class="status-dot ${r.visited?'done':''}"></span>
         </div>
         <div class="card-course">${esc(r.course)}</div>
-        <div class="card-meta">${esc(r.instructor)}${r.section? ' · شعبة '+esc(r.section):''}${r.period? ' · المحاضرة '+esc(r.period):''}</div>
+        <div class="card-meta">${esc(r.instructor)}${r.section? ' · شعبة '+esc(r.section):''}</div>
         <div class="card-meta-sub">${r.enrolled!==''? 'مسجلات: '+esc(r.enrolled):''}${r.capacity!==''? ' / سعة: '+esc(r.capacity):''}</div>
       `;
       card.addEventListener('click', ()=> openModal(idx));
@@ -615,8 +622,9 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
    * القاعدة:
    *  - غياب العضو وغياب الطلاب معاً («لا» و«لا») ← يلزم توثيق: «وثّق» مفعَّل،
    *    و«حفظ» معطَّل حتى تُرفع صورة واحدة على الأقل.
-   *  - أي حالة أخرى (حضور العضو، أو حضور الطلاب، أو كليهما) ← «وثّق» معطَّل
-   *    و«حفظ» مفعَّل بعد الإجابة على السؤالين.
+   *  - غياب العضو مع حضور الطلاب ← «وثّق» مفعَّل (اختياري) و«حفظ» مفعَّل.
+   *  - أي حالة أخرى (حضور العضو) ← «وثّق» معطَّل و«حفظ» مفعَّل بعد الإجابة
+   *    على السؤالين.
    *  - أثناء شاشة التصوير (معاينة قائمة) ← «حفظ» معطَّل حتى الإرسال أو الإلغاء.
    */
   const PHOTO_REQUIRED_HINT = 'يلزم توثيق الغياب بصورة قبل الحفظ.';
@@ -626,14 +634,15 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
 
     const answered  = !!(r.entry.member && r.entry.student);
     const needPhoto = photoRequired(r);
+    const canPhoto  = photoAllowed(r);
     const photos    = (r.entry && r.entry.photoCount) || 0;
     const capturing = !document.getElementById('photoCaptureActions').classList.contains('hidden');
 
     const docBtn  = document.getElementById('photoDocBtn');
     const saveBtn = document.getElementById('saveBtn');
 
-    // زرّ التوثيق: يُفعَّل فقط عند غياب العضو والطلاب معاً
-    docBtn.disabled = !needPhoto;
+    // زرّ التوثيق: يُفعَّل عند غياب العضو (إلزامي فقط إن غاب الطلاب أيضاً)
+    docBtn.disabled = !canPhoto;
     docBtn.classList.toggle('required', needPhoto && photos === 0);
 
     // زرّ الحفظ
