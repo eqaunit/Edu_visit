@@ -551,6 +551,10 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   function hasIssue(r){
     return !!(r && r.entry && (r.entry.member==='لا' || r.entry.student==='لا'));
   }
+  /** التصوير إلزامي فقط عند غياب العضو وغياب الطلاب معاً. */
+  function photoRequired(r){
+    return !!(r && r.entry && r.entry.member==='لا' && r.entry.student==='لا');
+  }
 
   function renderList(){
     const list = document.getElementById('cardsList');
@@ -609,34 +613,38 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
    * ضبط حالة زرَّي «وثّق» و«حفظ».
    *
    * القاعدة:
-   *  - الخياران «نعم» ← لا حاجة لتوثيق: «وثّق» معطَّل و«حفظ» مفعَّل.
-   *  - أحدهما أو كلاهما «لا» ← يلزم توثيق: «وثّق» مفعَّل، و«حفظ» معطَّل
-   *    حتى تُرفع صورة واحدة على الأقل.
+   *  - غياب العضو وغياب الطلاب معاً («لا» و«لا») ← يلزم توثيق: «وثّق» مفعَّل،
+   *    و«حفظ» معطَّل حتى تُرفع صورة واحدة على الأقل.
+   *  - أي حالة أخرى (حضور العضو، أو حضور الطلاب، أو كليهما) ← «وثّق» معطَّل
+   *    و«حفظ» مفعَّل بعد الإجابة على السؤالين.
    *  - أثناء شاشة التصوير (معاينة قائمة) ← «حفظ» معطَّل حتى الإرسال أو الإلغاء.
    */
+  const PHOTO_REQUIRED_HINT = 'يلزم توثيق الغياب بصورة قبل الحفظ.';
   function updateSaveState(){
     if(activeRowIndex==null) return;
     const r = dataRows[activeRowIndex];
 
     const answered  = !!(r.entry.member && r.entry.student);
-    const issue     = hasIssue(r);
+    const needPhoto = photoRequired(r);
     const photos    = (r.entry && r.entry.photoCount) || 0;
     const capturing = !document.getElementById('photoCaptureActions').classList.contains('hidden');
 
     const docBtn  = document.getElementById('photoDocBtn');
     const saveBtn = document.getElementById('saveBtn');
 
-    // زرّ التوثيق: يُفعَّل فقط عند وجود ملاحظة
-    docBtn.disabled = !issue;
-    docBtn.classList.toggle('required', issue && photos === 0);
+    // زرّ التوثيق: يُفعَّل فقط عند غياب العضو والطلاب معاً
+    docBtn.disabled = !needPhoto;
+    docBtn.classList.toggle('required', needPhoto && photos === 0);
 
     // زرّ الحفظ
-    saveBtn.disabled = !answered || capturing || (issue && photos === 0);
+    saveBtn.disabled = !answered || capturing || (needPhoto && photos === 0);
 
-    // تلميح للموظف عن سبب التعطيل
+    // تلميح للموظف عن سبب التعطيل (ويُمسح إذا لم يعد التصوير مطلوباً)
     const st = document.getElementById('photoStatus');
-    if(issue && photos === 0 && !capturing && !st.textContent){
-      st.textContent = 'يلزم توثيق الملاحظة بصورة قبل الحفظ.';
+    if(needPhoto && photos === 0 && !capturing && !st.textContent){
+      st.textContent = PHOTO_REQUIRED_HINT;
+    }else if(!needPhoto && st.textContent === PHOTO_REQUIRED_HINT){
+      st.textContent = '';
     }
   }
 
