@@ -333,6 +333,13 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
     }
     return v==null? '' : String(v).trim();
   }
+  /** معرّف المشرف الميداني بصيغة Eqa_N. الرقم المجرّد (حتى لو بأرقام عربية) يُحوَّل إلى Eqa_N، وغيره يبقى كما هو. */
+  function normalizeSupervisorId(v){
+    const s = String(v||'').trim()
+      .replace(/[٠-٩]/g, d=> String(d.charCodeAt(0)-0x0660))
+      .replace(/[۰-۹]/g, d=> String(d.charCodeAt(0)-0x06F0));
+    return /^\d+$/.test(s) ? 'Eqa_'+s : s;
+  }
   function natParts(s){ return String(s||'').match(/\d+|\D+/g) || ['']; }
   function compareRooms(a,b){
     const pa=natParts(a), pb=natParts(b);
@@ -386,7 +393,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
       campus: payload.meta.maqar||'', date: payload.meta.date||'', day: payload.meta.day||'',
       semester: payload.meta.semester||'', buildings: payload.meta.buildings||'',
       week: payload.meta.week||'', periods: payload.meta.periods||'',
-      employeeName: payload.meta.employeeName||'',
+      employeeName: normalizeSupervisorId(payload.meta.employeeName),
     };
     dataRows.sort(compareRows);
     storageKey = buildStorageKey();
@@ -1018,7 +1025,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
   const OUTPUT_HEADERS_EMBEDDED = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
     'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
     'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
-    'المقر', 'التاريخ ', 'اليوم', 'الأسبوع', 'الفصل'];
+    'المقر', 'التاريخ ', 'اليوم', 'الأسبوع', 'الفصل', 'رمز المشرف'];
 
   function buildEmbeddedRows(){
     const rows = [];
@@ -1031,6 +1038,7 @@ const EMBEDDED_VISIT = /*__VISIT_DATA__*/null/*__END__*/;
         r.activity||'', r.section||'', r.hours||'', r.course||'', r.courseCode||'',
         r.studyMode||'', r.dept||'', r.collegeOfCourse||'',
         meta.campus||'', meta.date||'', meta.day||'', meta.week||'', r.semester||'',
+        meta.employeeName||'',
       ]);
     });
     return rows;

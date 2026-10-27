@@ -71,14 +71,6 @@
     font-size:15.5px;font-family:inherit;background:var(--bg-page);color:var(--txt-dark);}
   .filter-row-full select:disabled{opacity:.5;}
   .chip-toggles{display:flex;flex-wrap:wrap;gap:9px;}
-  .activity-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;}
-  .activity-check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none;
-    border:1px solid var(--border-clr);background:var(--bg-page);border-radius:9px;
-    padding:9px 12px;font-size:14px;transition:all .12s;}
-  .activity-check:hover{border-color:var(--light-green);}
-  .activity-check.on{background:var(--green-ok-bg);border-color:var(--light-green);color:var(--dark-green);font-weight:600;}
-  .activity-check input{width:17px;height:17px;accent-color:var(--dark-green);margin:0;cursor:pointer;}
-  .activity-hint{font-size:12px;color:var(--txt-muted);margin-top:7px;}
   .chip-toggle{border:1px solid var(--border-clr);background:var(--bg-page);color:var(--txt-body);
     font-size:14.5px;padding:0 17px;height:44px;line-height:44px;border-radius:9px;cursor:pointer;
     user-select:none;white-space:nowrap;}
@@ -190,6 +182,7 @@
       <div class="filter-item">
         <label>الفصل الدراسي</label>
         <select id="semesterSelect">
+          <option value="">اختر الفصل...</option>
           <option value="s1_1448">الفصل الأول 1448/1449هـ</option>
           <option value="s2_1448">الفصل الثاني 1448/1449هـ</option>
         </select>
@@ -214,20 +207,20 @@
       </div>
     </div>
 
+    <div id="semesterWarning" class="hidden" style="margin-top:14px;background:var(--red-soft);border:1px solid #f5c6c6;
+      border-radius:10px;padding:12px 14px;font-size:13.5px;color:var(--red);"></div>
+
     <div class="filter-row-full">
       <label>الفترة (اختيار متعدد)</label>
+      <div id="ramadanNote" class="hidden" style="font-size:12.5px;color:var(--gold-700);font-weight:700;margin-bottom:8px;">
+        🌙 هذا الأسبوع ضمن شهر رمضان المبارك — الأوقات أدناه وفق جدول المحاضرات الرمضانية المعتمد.
+      </div>
       <div class="chip-toggles" id="periodToggles"></div>
     </div>
 
     <div class="filter-row-full">
       <label>المبنى</label>
       <select id="buildingSelect" disabled><option value="">اختر المقر أولاً</option></select>
-    </div>
-
-    <div class="filter-row-full">
-      <label>الأنشطة المشمولة بالزيارة</label>
-      <div class="activity-checks" id="activityChecks"></div>
-      <div class="activity-hint">يُستثنى نمط الدراسة «عن بُعد» و«خارج الجامعة» في كل الحالات.</div>
     </div>
   </div>
 
@@ -239,8 +232,9 @@
 
     <div class="card">
       <div class="field" style="margin-bottom:12px;">
-        <label>رمز المشرف الميداني</label>
-        <input type="text" id="employeeName" placeholder="مثال: MS01" style="direction:rtl;text-align:right;">
+        <label>رمز المشرف الميداني (رقم فقط)</label>
+        <input type="text" id="employeeName" inputmode="numeric" autocomplete="off" placeholder="مثال: 2" style="direction:rtl;text-align:right;">
+        <div id="employeeIdPreview" style="margin-top:6px;font-size:13.5px;min-height:18px;"></div>
       </div>
       <button class="primary-btn" id="genLinkBtn" disabled>إنشاء رابط هذي الزيارة</button>
       <div id="linkResultBox" class="hidden" style="margin-top:12px;">
@@ -297,17 +291,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   };
   const PERIOD_LABELS = {'صباحية1':'صباحية ١','صباحية2':'صباحية ٢','الظهر':'الظهر','المسائية1':'المسائية ١','المسائية2':'المسائية ٢'};
   const ACTIVE_PERIODS = ['صباحية1','صباحية2','الظهر','المسائية1','المسائية2'];
-  // أنواع الأنشطة المتاحة للزيارة — يُستثنى نمط الدراسة «عن بعد» دائماً.
-  // القيم بعد التطبيع (حذف المسافات) كما تَرِد في عمود «النشاط».
-  const ACTIVITY_TYPES = [
-    {key:'نظري',   label:'نظري'},
-    {key:'عملي',   label:'عملي'},
-    {key:'استديو', label:'استديو'},
-    {key:'نشاط1',  label:'نشاط ١'},
-    {key:'نشاط3',  label:'نشاط ٣'},
-    {key:'نشاط4',  label:'نشاط ٤'}
-  ];
-  const DEFAULT_ACTIVITIES = ['نظري'];
+  const ACTIVITY_WHITELIST = ['نظري','عملي','نشاط1','نشاط3','نشاط4'];
   const OUTPUT_HEADERS = ['الإفادة ', 'ملاحظة', 'الطلاب ', 'عضو هيئة التدريس', 'المحاضرة', 'الاسبوع',
     'كلية المحاضر', 'المحاضر', 'رقم المنسوب', 'الرمز', 'رقم القاعة', 'المرحلة', 'السقف', 'الطلبة',
     'النشاط', 'الشعبة', 'س', 'المقرر', 'كود المقرر', 'نمط الدراسة', 'القسم', 'الكلية المقرر',
@@ -360,6 +344,26 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     return `${y}-${m}-${day}`;
   }
 
+  // ---------- شهر رمضان: نطاقات ميلادية لكل سنة هجرية — أضف سنة جديدة هنا مستقبلاً ----------
+  const RAMADAN_RANGES = [
+    { hijriYear: 1448, start: new Date(2027,1,8), end: new Date(2027,2,8) }, // ٨ فبراير – ٨ مارس ٢٠٢٧ تقريباً
+  ];
+  function isDateInRamadan(date){
+    if(!date) return false;
+    const t = date.getTime();
+    return RAMADAN_RANGES.some(r => t >= r.start.getTime() && t <= r.end.getTime());
+  }
+  // أوقات المحاضرات الرمضانية المعتمدة (مطابقة لجدول الجامعة الرسمي) — ثابتة
+  // تقريباً من عام لآخر، لذلك مُعرَّفة كقيم عامة تُطبَّق تلقائياً كل ما وقع
+  // الأسبوع المُختار ضمن نطاق رمضان بأعلاه.
+  const RAMADAN_PERIOD_TIMES = {
+    'صباحية1':   '٩:٠٠-١٠:١٥ ص',
+    'صباحية2':   '١٠:٢٠-١١:٣٥ ص',
+    'الظهر':     '١١:٤٠-١٢:٥٥ م',
+    'المسائية1': '١:٠٥-٢:٢٠ م',
+    'المسائية2': '٢:٢٥-٣:٤٠ م',
+  };
+
   function norm(v){ return (v==null?'':String(v)).trim(); }
   function escHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function normMaqar(s){
@@ -394,7 +398,6 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   let aoaData=null, headerRowIdx=-1, colIdx={}, dayColIdx={};
   let originalFileName='زيارة';
   let selectedPeriods = new Set();
-  let selectedActivities = new Set(DEFAULT_ACTIVITIES);
   let selectedBuilding = '';
   let lastResults = [];
   let lastGeneratedLink = '';
@@ -403,9 +406,9 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   const els = {};
   ['fileInput','loadingMsg','uploadError','uploadCard','loadedBar','loadedFileName','changeFileBtn',
-   'filtersCard','semesterSelect','maqarSelect','buildingSelect','daySelect','weekSelect','periodToggles','activityChecks',
+   'filtersCard','semesterSelect','semesterWarning','ramadanNote','maqarSelect','buildingSelect','daySelect','weekSelect','periodToggles',
    'resultsSection','counterBadge','tableWrap','downloadBtn',
-   'employeeName','genLinkBtn','linkResultBox','copyLinkBtn','shareLinkBtn',
+   'employeeName','employeeIdPreview','genLinkBtn','linkResultBox','copyLinkBtn','shareLinkBtn',
    'shortenBtn','shortenStatus','shortResultBox','shortResultInput','copyShortBtn','shareShortBtn'
    ].forEach(id=> els[id]=document.getElementById(id));
 
@@ -448,9 +451,10 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
         return;
       }
 
+      els.semesterSelect.value = ''; // كل ملف جديد يبدأ بلا فصل محدَّد، حتى نكتشفه أو يختاره المستخدم يدوياً
+      detectAndSelectSemester();
       populateMaqarOptions();
       renderPeriodToggles();
-      renderActivityChecks();
       els.loadingMsg.classList.add('hidden');
       els.uploadCard.classList.add('hidden');
       els.loadedFileName.textContent = file.name;
@@ -474,6 +478,43 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     els.fileInput.value='';
   });
 
+  function detectAndSelectSemester(){
+    els.semesterWarning.classList.add('hidden');
+    els.semesterWarning.textContent = '';
+    if(colIdx.فصل===-1) return; // العمود غير موجود بالملف — يبقى الاختيار يدوياً بلا تحذير
+
+    const values = new Set();
+    for(let r=headerRowIdx+1; r<aoaData.length && values.size<5; r++){
+      const v = aoaData[r] ? aoaData[r][colIdx.فصل] : null;
+      if(v!=null && String(v).trim()!=='') values.add(String(v).trim());
+    }
+    if(values.size===0) return;
+    const sample = Array.from(values)[0];
+
+    const hasOldYear = /1447|١٤٤٧/.test(sample); // إشارة واضحة لعام أكاديمي قديم غير مدعوم
+    const hasYear48 = /1448|١٤٤٨/.test(sample);
+    const hasYear49 = /1449|١٤٤٩/.test(sample);
+    const hasFirst = /الأول|الاول/.test(sample);
+    const hasSecond = /الثاني/.test(sample);
+
+    let matched = '';
+    if(!hasOldYear){
+      if(hasFirst && !hasSecond && hasYear48) matched = 's1_1448';
+      else if(hasSecond && (hasYear48 || hasYear49)) matched = 's2_1448';
+    }
+
+    if(matched){
+      els.semesterSelect.value = matched;
+      populateWeekSelect();
+    }else{
+      els.semesterWarning.textContent =
+        `⚠️ تعذّر التعرّف تلقائياً على فصل هذا الملف من عمود "الفصل" (القيمة الموجودة بالملف: "${sample}"). ` +
+        `النظام يدعم حالياً الفصل الأول والثاني ١٤٤٨/١٤٤٩هـ فقط — لن يظهر أي تاريخ حتى تختار الفصل يدوياً أعلاه، ` +
+        `وتأكد أن الفصل المختار يطابق فعلياً فصل هذا الملف قبل المتابعة.`;
+      els.semesterWarning.classList.remove('hidden');
+    }
+  }
+
   function populateMaqarOptions(){
     const uniq = new Set();
     for(let r=headerRowIdx+1;r<aoaData.length;r++){
@@ -487,10 +528,21 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   function renderPeriodToggles(){
     const shatr = deriveShatr(els.maqarSelect.value);
+    const semKey = els.semesterSelect.value;
+    const weekNum = parseInt(els.weekSelect.value, 10);
+    const dayName = els.daySelect.value;
+    let checkDate = null;
+    if(semKey && weekNum){
+      checkDate = dayName ? computeDate(semKey, weekNum, dayName) : weekSunday(semKey, weekNum);
+    }
+    const ramadan = isDateInRamadan(checkDate);
+    els.ramadanNote.classList.toggle('hidden', !ramadan);
+
     els.periodToggles.innerHTML = ACTIVE_PERIODS.map(p=>{
       const def = PERIOD_DEFS[p];
       const active = selectedPeriods.has(p) ? ' active' : '';
-      return `<div class="chip-toggle${active}" data-period="${p}">${PERIOD_LABELS[p]} <span class="t">(المحاضرة ${def.nums.join('،')} — ${def.label2(shatr)})</span></div>`;
+      const timeLabel = ramadan ? RAMADAN_PERIOD_TIMES[p] : def.label2(shatr);
+      return `<div class="chip-toggle${active}" data-period="${p}">${PERIOD_LABELS[p]} <span class="t">(المحاضرة ${def.nums.join('،')} — ${timeLabel})</span></div>`;
     }).join('');
     els.periodToggles.querySelectorAll('.chip-toggle[data-period]').forEach(chip=>{
       chip.addEventListener('click', ()=>{
@@ -499,22 +551,6 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
         chip.classList.toggle('active');
         refresh();
       });
-    });
-  }
-
-  function renderActivityChecks(){
-    els.activityChecks.innerHTML = ACTIVITY_TYPES.map(a=>{
-      const on = selectedActivities.has(a.key) ? ' checked' : '';
-      return `<label class="activity-check"><input type="checkbox" data-activity="${a.key}"${on}><span>${a.label}</span></label>`;
-    }).join('');
-    els.activityChecks.querySelectorAll('input[data-activity]').forEach(cb=>{
-      cb.addEventListener('change', ()=>{
-        const k = cb.dataset.activity;
-        if(cb.checked) selectedActivities.add(k); else selectedActivities.delete(k);
-        cb.closest('.activity-check').classList.toggle('on', cb.checked);
-        refresh();
-      });
-      cb.closest('.activity-check').classList.toggle('on', cb.checked);
     });
   }
 
@@ -552,6 +588,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   els.semesterSelect.addEventListener('change', ()=>{
     populateWeekSelect();
+    renderPeriodToggles();
     refresh();
   });
   els.maqarSelect.addEventListener('change', ()=>{
@@ -559,8 +596,8 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     renderPeriodToggles();
     refresh();
   });
-  els.daySelect.addEventListener('change', refresh);
-  els.weekSelect.addEventListener('change', refresh);
+  els.daySelect.addEventListener('change', ()=>{ renderPeriodToggles(); refresh(); });
+  els.weekSelect.addEventListener('change', ()=>{ renderPeriodToggles(); refresh(); });
 
   function refresh(){
     const targetSemester = els.semesterSelect.value;
@@ -572,15 +609,10 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     const computedDateObj = computeDate(targetSemester, targetWeek, targetDay);
     const targetDateStr = computedDateObj ? fmtDate(computedDateObj) : '';
 
-    if(!targetMaqarRaw || !targetBuilding || !targetDateStr || isNaN(targetWeek)
-       || selectedPeriods.size===0 || selectedActivities.size===0){
+    if(!targetMaqarRaw || !targetBuilding || !targetDateStr || isNaN(targetWeek) || selectedPeriods.size===0){
       lastResults = [];
       renderCounter(null);
-      const missingAct = selectedActivities.size===0;
-      els.tableWrap.innerHTML = '<div class="placeholder-box">' + (missingAct
-        ? 'اختر نوع نشاط واحداً على الأقل من «الأنشطة المشمولة بالزيارة».'
-        : 'أكمل المعايير أعلاه (المقر، المبنى، اليوم، الأسبوع، وفترة واحدة على الأقل) لعرض المحاضرات المطابقة.')
-        + '</div>';
+      els.tableWrap.innerHTML = '<div class="placeholder-box">أكمل المعايير أعلاه (المقر، المبنى، اليوم، الأسبوع، وفترة واحدة على الأقل) لعرض المحاضرات المطابقة.</div>';
       els.downloadBtn.disabled = true;
       return;
     }
@@ -601,7 +633,7 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
         const dayVal = row[dayIdx];
         if(dayVal==null || String(dayVal).trim()==='') continue;
         if(colIdx.نمط_دراسة>-1 && norm(row[colIdx.نمط_دراسة]) !== 'حضوري') continue;
-        if(colIdx.نشاط>-1 && !selectedActivities.has(normActivity(row[colIdx.نشاط]))) continue;
+        if(colIdx.نشاط>-1 && !ACTIVITY_WHITELIST.includes(normActivity(row[colIdx.نشاط]))) continue;
         const weekVal = colIdx.اسبوع>-1 ? Number(row[colIdx.اسبوع]) : 0;
         if(!(weekVal===0 || weekVal===targetWeek)) continue;
         const roomCode = colIdx.رقم_قاعة>-1 ? norm(row[colIdx.رقم_قاعة]) : '';
@@ -780,14 +812,35 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
     return {
       meta:{ maqar:meta.maqarRaw, buildings:meta.building, day:meta.day, date:meta.dateStr,
              week:meta.week, periods:periodsLabel, semester: rows[0]?.semester||'',
-             employeeName: (els.employeeName.value||'').trim() },
+             employeeName: supervisorId() },
       rows,
     };
   }
 
   // ---------- رابط الزيارة (بديل آمن لآيفون) ----------
+  /**
+   * معرّف المشرف الميداني: المستخدم يدخل رقماً فقط (2 أو 7 ...) فيتشكّل المعرّف Eqa_2 أو Eqa_7.
+   * تُقبل الأرقام العربية، وتُقبل البادئة Eqa_ إن كُتبت. أي إدخال آخر غير صالح ويُعيد ''.
+   */
+  function supervisorId(){
+    const raw = String(els.employeeName.value||'').trim()
+      .replace(/[٠-٩]/g, d=> String(d.charCodeAt(0)-0x0660))
+      .replace(/[۰-۹]/g, d=> String(d.charCodeAt(0)-0x06F0))
+      .replace(/^eqa[\s_-]*/i, '');
+    return /^\d{1,6}$/.test(raw) ? 'Eqa_'+raw : '';
+  }
   function updateGenLinkBtnState(){
-    els.genLinkBtn.disabled = !(lastResults.length>0 && (els.employeeName.value||'').trim());
+    const typed = (els.employeeName.value||'').trim();
+    const id = supervisorId();
+    els.genLinkBtn.disabled = !(lastResults.length>0 && id);
+    if(!typed){ els.employeeIdPreview.textContent = ''; }
+    else if(id){
+      els.employeeIdPreview.style.color = 'var(--dark-green, #1A5632)';
+      els.employeeIdPreview.textContent = 'المعرّف في النموذج: ' + id;
+    }else{
+      els.employeeIdPreview.style.color = 'var(--red, #D03A3A)';
+      els.employeeIdPreview.textContent = 'أدخل رقماً فقط، مثل 2 أو 7.';
+    }
   }
   els.employeeName.addEventListener('input', updateGenLinkBtnState);
 
@@ -801,8 +854,8 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
 
   els.genLinkBtn.addEventListener('click', async ()=>{
     if(!lastResults.length) return;
-    if(!(els.employeeName.value||'').trim()){
-      alert('أدخل رمز المشرف الميداني أولاً.');
+    if(!supervisorId()){
+      alert('أدخل رمز المشرف الميداني رقماً فقط (مثل 2 أو 7).');
       els.employeeName.focus();
       return;
     }
@@ -965,7 +1018,6 @@ const ROOM_LINK_DATA = [{"mq": "مقر الطالبات بالعزيزية", "rc
   });
 
   renderPeriodToggles();
-  renderActivityChecks();
 })();
 </script>
 </body>
